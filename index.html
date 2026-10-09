@@ -42,7 +42,7 @@
   <div class="menu">
     <div class="go">
       <button id="start" type="button"><span>Float</span></button>
-      <button id="choose" type="button" aria-expanded="false" aria-controls="picker">nights</button>
+      <button id="choose" type="button" aria-expanded="false" aria-controls="picker">choose a night</button>
     </div>
     <div id="picker">
       <div class="sheet" role="dialog" aria-label="Start from a night">
@@ -51,7 +51,6 @@
         <p id="best"></p>
       </div>
     </div>
-    <p class="hint">hold anywhere and Blubber floats toward it</p>
     <p class="help">
       <span class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>WASD</kbd> float</span>
       <span>hold the mouse or a finger — float toward it</span>
@@ -81,7 +80,10 @@
   </div>
 </section>
 
-<button id="mute" type="button" aria-pressed="false">sound on</button>
+<button id="mute" type="button" aria-pressed="false" aria-label="Sound on">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path class="cross" d="M16 9l6 6M22 9l-6 6"/></svg>
+  <span class="word">sound on</span>
+</button>
 <pre id="error" hidden></pre>
 
 <script type="module" src="/src/main.js"></script>

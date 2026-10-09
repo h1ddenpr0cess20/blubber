@@ -56,6 +56,8 @@ export class Renderer {
     this.domElement = canvas;
     this.shadowMap = { enabled: false, type: PCFShadowMap };
     this.sortObjects = true;
+    /** What the transmission pass is drawn at, as a fraction of the canvas: what shows through glass is blurred anyway. */
+    this.transmissionResolutionScale = 1;
     this._pixelRatio = 1;
     this._width = canvas.width;
     this._height = canvas.height;
@@ -171,11 +173,12 @@ export class Renderer {
     const context = { scene, camera, env, envRotation, lighting, shadow };
 
     if (lists.transmissive.length > 0) {
-      const size = [this.domElement.width, this.domElement.height];
+      const scale = this.transmissionResolutionScale;
+      const size = [Math.max(1, Math.round(this.domElement.width * scale)), Math.max(1, Math.round(this.domElement.height * scale))];
       const frame = this._frame_(context, 'linear', null);
       // three clears this to white at half alpha, premultiplied by the context: where nothing opaque
       // is behind a transmissive surface, that grey is what it refracts.
-      this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame });
+      this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame, size });
       this._renderItems(lists.opaque, context, frame);
       this.backend.endPass();
       context.transmission = { size };

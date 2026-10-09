@@ -57,13 +57,13 @@ export class WebGLBackend {
 
   // ------------------------------------------------------------ passes
 
-  beginPass({ target, clear, frame }) {
+  beginPass({ target, clear, frame, size }) {
     const gl = this.gl;
     if (target === 'canvas') {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, this.width, this.height);
     } else {
-      const rt = this._transmissionTarget();
+      const rt = this._transmissionTarget(size);
       gl.bindFramebuffer(gl.FRAMEBUFFER, rt.msaaFramebuffer);
       gl.viewport(0, 0, rt.width, rt.height);
     }
@@ -354,9 +354,8 @@ export class WebGLBackend {
     return texture;
   }
 
-  _transmissionTarget() {
+  _transmissionTarget([width, height] = [this.width, this.height]) {
     const gl = this.gl;
-    const width = this.width, height = this.height;
     let rt = this.transmission;
     if (rt && rt.width === width && rt.height === height) return rt;
     if (rt) {
