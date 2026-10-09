@@ -32,6 +32,13 @@ const WARM_LIGHTS = 4;
 /** Wisps of ground mist drifting round Blubber. */
 const MISTS = 26;
 
+/**
+ * What a phone (or anything held and touched) is spared, so it doesn't run hot: fewer pixels, a smaller
+ * shadow map, and what shows through Blubber's skin drawn at half size, where it is blurred anyway.
+ */
+export const HANDHELD = Object.freeze({ pixelRatio: 1.5, shadowMap: 1024, transmission: 0.5 });
+const handheld = () => globalThis.matchMedia?.('(pointer: coarse)').matches ?? false;
+
 export async function createRenderer(preference) {
   if (preference !== 'webgl' && typeof navigator !== 'undefined' && navigator.gpu) {
     const canvas = document.createElement('canvas');
@@ -187,7 +194,9 @@ export function paintSky(sky, { width = 2048, kind = 'dead', aurora = false, und
 export async function createStage(host) {
   const preference = new URLSearchParams(globalThis.location?.search ?? '').get('renderer');
   const renderer = await createRenderer(preference);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const held = handheld();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, held ? HANDHELD.pixelRatio : 2));
+  if (held) renderer.transmissionResolutionScale = HANDHELD.transmission;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = GFX.PCFShadowMap;
   host.appendChild(renderer.domElement);
@@ -213,7 +222,7 @@ export async function createStage(host) {
   scene.add(hemi);
   const key = new GFX.DirectionalLight(0xc0ccff, 1.0);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.setScalar(held ? HANDHELD.shadowMap : 2048);
   key.shadow.bias = -0.0003;
   key.shadow.normalBias = 0.02;
   let span = 0;

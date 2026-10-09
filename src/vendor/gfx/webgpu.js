@@ -176,7 +176,7 @@ export class WebGPUBackend {
 
   // ------------------------------------------------------------ passes
 
-  beginPass({ target, clear, frame }) {
+  beginPass({ target, clear, frame, size }) {
     const d = this.device;
     // Every pass is drawn upside down, the canvas included: that is what
     // ANGLE does under WebGL, and it puts the multisample pattern — which
@@ -192,7 +192,7 @@ export class WebGPUBackend {
       format = this.format;
       height = this.height;
     } else {
-      const rt = this._transmissionTarget();
+      const rt = this._transmissionTarget(size);
       colorView = rt.msaa.createView();
       resolveTarget = rt.texture.createView({ baseMipLevel: 0, mipLevelCount: 1 });
       depthView = rt.depth.createView();
@@ -724,16 +724,16 @@ export class WebGPUBackend {
     pass.end();
   }
 
-  _transmissionTarget() {
+  _transmissionTarget([width, height] = [this.width, this.height]) {
     const rt = this.transmission;
-    if (rt && rt.width === this.width && rt.height === this.height) return rt;
+    if (rt && rt.width === width && rt.height === height) return rt;
     rt?.texture.destroy();
     rt?.msaa.destroy();
     rt?.depth.destroy();
-    const size = [this.width, this.height];
-    const levels = Math.floor(Math.log2(Math.max(this.width, this.height))) + 1;
+    const size = [width, height];
+    const levels = Math.floor(Math.log2(Math.max(width, height))) + 1;
     this.transmission = {
-      width: this.width, height: this.height,
+      width, height,
       texture: this.device.createTexture({ size, format: 'rgba16float', mipLevelCount: levels, usage: T.RENDER_ATTACHMENT | T.TEXTURE_BINDING }),
       msaa: this.device.createTexture({ size, format: 'rgba16float', sampleCount: SAMPLES, usage: T.RENDER_ATTACHMENT }),
       depth: this.device.createTexture({ size, format: DEPTH_FORMAT, sampleCount: SAMPLES, usage: T.RENDER_ATTACHMENT }),

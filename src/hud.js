@@ -25,7 +25,9 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
   const pickerEl = $('picker'), chooseEl = $('choose');
   const ctx = mapEl.getContext('2d');
   const ring = spookEl.querySelector('.ready');
-  let shown = false, mapEvery = 0, mapScale = 2, last = -1;
+  const muteWord = muteEl.querySelector('.word');
+  const timeEl = clockEl.querySelector('.time'), faceEl = clockEl.querySelector('.face');
+  let shown = false, mapEvery = 0, mapScale = 2, last = -1, shownTime = '', shownReady = -1;
 
   muteEl.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -87,6 +89,7 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
 
     title(saved) {
       titleEl.hidden = false;
+      document.body.classList.add('titled');
       for (const el of [top, bottom, mapEl, spookEl, tallyEl, bannerEl]) el.hidden = true;
       shown = false;
       document.body.dataset.season = 'halloween';
@@ -121,6 +124,7 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
     play(night, index) {
       pick(false);
       titleEl.hidden = true;
+      document.body.classList.remove('titled');
       tallyEl.hidden = true;
       for (const el of [top, bottom, mapEl, spookEl]) el.hidden = false;
       document.body.dataset.season = night.season;
@@ -146,13 +150,19 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
     },
 
     clock(seconds, par) {
-      clockEl.querySelector('.time').textContent = clockAt(seconds, par);
-      clockEl.querySelector('.face').textContent = seconds <= par ? 'before midnight' : 'past midnight';
-      clockEl.classList.toggle('late', seconds > par);
+      // Called every frame, and the time only moves on a minute at a time: touch the page only when it does.
+      const time = clockAt(seconds, par), late = seconds > par;
+      if (`${time}${late}` === shownTime) return;
+      shownTime = `${time}${late}`;
+      timeEl.textContent = time;
+      faceEl.textContent = late ? 'past midnight' : 'before midnight';
+      clockEl.classList.toggle('late', late);
     },
 
     /** How ready the next spook is, 0 to 1. */
     spook(ready) {
+      if (ready === shownReady) return;
+      shownReady = ready;
       ring.style.strokeDashoffset = String(289 * (1 - ready));
       spookEl.classList.toggle('cooling', ready < 1);
     },
@@ -219,7 +229,8 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
 
     muted(on) {
       muteEl.setAttribute('aria-pressed', String(on));
-      muteEl.textContent = on ? 'sound off' : 'sound on';
+      muteWord.textContent = on ? 'sound off' : 'sound on';
+      muteEl.setAttribute('aria-label', on ? 'Sound off' : 'Sound on');
     },
   };
 }

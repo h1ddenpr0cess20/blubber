@@ -45,13 +45,19 @@ try {
   game = createGame({ stage, hud, input, audio, storage: createStorage() });
   globalThis.blubber = game;
 
-  // If the frames come slow, draw fewer pixels: down from the screen's own density, as far as one to one.
+  // At most 60 frames a second, even where the screen refreshes at 90 or 120: past that a phone only gets
+  // hotter. While nothing much moves (the title, a pause, the tally), 30.
+  // And if the frames come slow, draw fewer pixels: down from the screen's own density, as far as one to one.
   let slow = 0, ratio = stage.renderer.getPixelRatio();
-  let last = performance.now();
+  let last = performance.now(), due = last;
   stage.renderer.setAnimationLoop((now) => {
+    const every = 1000 / (game.calm ? 30 : 60);
+    // A few milliseconds' grace, since the screen's own frames don't land exactly on ours.
+    if (now < due - 3) return;
+    due = Math.max(due + every, now);
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
-    slow = slow * 0.98 + (dt > 1 / 40 ? 1 : 0) * 0.02;
+    slow = slow * 0.98 + (dt > every * 1.5 / 1000 ? 1 : 0) * 0.02;
     if (slow > 0.6 && ratio > 1) {
       ratio = Math.max(1, ratio - 0.5);
       stage.renderer.setPixelRatio(ratio);

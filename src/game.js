@@ -159,7 +159,9 @@ export function createGame({ stage, hud, input, audio, storage }) {
     view.step(0, true);
     enter('ready');
     hud.play(night, i);
-    hud.banner(night.name, 'big', night.recipe.intro);
+    // The title has no room to say how a finger steers, so the first night says it.
+    const touch = i === 0 && globalThis.matchMedia?.('(pointer: coarse)').matches;
+    hud.banner(night.name, 'big', touch ? `${night.recipe.intro}\nHold anywhere and Blubber floats toward it.` : night.recipe.intro);
     hud.candy(0);
     hud.lanterns(haunt);
     hud.clock(0, night.recipe.par);
@@ -375,6 +377,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
     again,
     get state() { return state; },
     get paused() { return paused; },
+    /** Nothing much is moving: the title, a pause, the tally. It can be drawn less often. */
+    get calm() { return paused || state === 'title' || state === 'tally'; },
     /** Where Blubber is on the screen, in CSS pixels, for the pointer controls. */
     ghostOnScreen(rect) {
       const g = haunt.ghost;
