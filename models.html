@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blubber — models</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07061a; color: #ccd; font: 13px system-ui, sans-serif; }
+  #view { position: fixed; inset: 0; }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  #bar { position: fixed; left: 8px; top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  #bar button { background: #1c1830; color: #dde; border: 1px solid #446; padding: 4px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="bar"></div>
+<script type="module" src="/src/models/viewer.js"></script>
+</body>
+</html>

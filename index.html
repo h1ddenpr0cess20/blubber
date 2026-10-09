@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07061a">
+<meta name="description" content="Blubber, a blueberry ghost, floats through haunted mazes from Halloween to midwinter, lighting lanterns, eating candy and spooking off whatever shambles after it.">
+<title>Blubber</title>
+<link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+<div id="view"></div>
+
+<header id="top" hidden>
+  <div id="night"></div>
+  <div class="bag" aria-label="Candy"><span class="label">candy</span><span id="candy">0</span></div>
+</header>
+
+<canvas id="map" width="180" height="180" hidden aria-label="Map of the maze so far"></canvas>
+
+<footer id="bottom" hidden>
+  <div id="lanterns" aria-label="Lanterns lit"></div>
+  <div id="clock" aria-label="The time"><span class="face"></span><span class="time"></span></div>
+</footer>
+
+<button id="spook" type="button" hidden aria-label="Spook">
+  <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="ready" cx="50" cy="50" r="46"/></svg>
+  <span>spook</span>
+</button>
+
+<div id="banner" hidden></div>
+<div id="pause" hidden>paused<small>P to carry on</small></div>
+
+<section id="title" hidden>
+  <div class="wisps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <header class="crest">
+    <h1 aria-label="Blubber">
+      <span class="word" data-text="Blubber">Blubber</span>
+    </h1>
+    <p class="tag">a haunted maze</p>
+  </header>
+  <div class="menu">
+    <button id="start" type="button"><span>Float</span></button>
+    <div id="nights" aria-label="Start from a night"></div>
+    <p id="best"></p>
+    <p class="help">
+      <span class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>WASD</kbd> float</span>
+      <span>hold the mouse or a finger — float toward it</span>
+      <span class="keys"><kbd>Space</kbd> spook</span>
+      <span>light every lantern, then out through the moon gate</span>
+      <span class="keys"><kbd>Q</kbd><kbd>E</kbd> or right-drag turn · wheel zoom · <kbd>C</kbd> reset view · <kbd>P</kbd> pause · <kbd>M</kbd> mute</span>
+      <span class="touch">two fingers: pinch to zoom, twist to turn</span>
+    </p>
+  </div>
+</section>
+
+<section id="tally" hidden aria-live="polite">
+  <div class="card">
+    <p class="month"></p>
+    <h2></h2>
+    <div class="moons" aria-label="Moons"></div>
+    <dl>
+      <div class="row candy"><dt>candy</dt><dd></dd></div>
+      <div class="row time"><dt>out by</dt><dd></dd></div>
+      <div class="row caught"><dt>caught</dt><dd></dd></div>
+    </dl>
+    <p class="note"></p>
+    <div class="buttons">
+      <button class="again" type="button">again</button>
+      <button class="go" type="button">onward</button>
+    </div>
+  </div>
+</section>
+
+<button id="mute" type="button" aria-pressed="false">sound on</button>
+<pre id="error" hidden></pre>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

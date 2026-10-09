@@ -1,0 +1,529 @@
+@font-face {
+  font-family: 'Creepster';
+  src: url('./fonts/creepster.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fredoka';
+  src: url('./fonts/fredoka.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+:root {
+  --ink: #ece8ff;
+  --dim: #9a94c0;
+  /* Blubber's own colours, from its palette. */
+  --berry: #4a56c8;
+  --berry-2: #5b4fd2;
+  --juice: #7d6ae4;
+  --bloom: #b9aeff;
+  --frost: #dfe2ff;
+  /* The season's: set on <body data-season>. */
+  --season: #ff8a2a;
+  --season-deep: #a8400c;
+  --season-glow: rgba(255, 138, 42, 0.45);
+  --moon: #fff2c8;
+  --panel: linear-gradient(180deg, rgba(36, 30, 70, 0.92), rgba(14, 12, 32, 0.94));
+  --edge: rgba(185, 174, 255, 0.35);
+  --display: 'Creepster', 'Chiller', fantasy;
+  --font: 'Fredoka', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  color-scheme: dark;
+}
+body[data-season='harvest'] { --season: #f0a83c; --season-deep: #8a4a10; --season-glow: rgba(240, 168, 60, 0.45); }
+body[data-season='winter'] { --season: #9fdcff; --season-deep: #2a6aa8; --season-glow: rgba(159, 220, 255, 0.5); }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #05040f;
+  color: var(--ink);
+  font-family: var(--font);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#view { position: fixed; inset: 0; touch-action: none; }
+#view canvas { display: block; outline: none; }
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ———————————————————————————————— along the top */
+
+#top {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  padding: max(14px, env(safe-area-inset-top)) max(212px, calc(env(safe-area-inset-right) + 200px)) 0 max(18px, env(safe-area-inset-left));
+  pointer-events: none;
+  text-shadow: 0 2px 0 #000, 0 0 14px #000;
+}
+#top[hidden] { display: none; }
+#night { font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--frost); }
+#night .label { color: var(--season); text-shadow: 0 0 10px var(--season-glow), 0 2px 0 #000; }
+.bag { text-align: center; }
+#candy {
+  display: block;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #fff6d0 0%, var(--season) 45%, var(--season-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 14px var(--season-glow));
+}
+#candy.pop { animation: bump 0.25s ease-out; }
+@keyframes bump { 40% { transform: scale(1.18); } }
+
+#map {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  max-width: 180px;
+  max-height: 180px;
+  image-rendering: pixelated;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 6px 22px rgba(0, 0, 0, 0.55), 0 0 26px rgba(125, 106, 228, 0.18);
+  padding: 8px;
+  pointer-events: none;
+}
+#map[hidden] { display: none; }
+
+/* ———————————————————————————————— along the bottom */
+
+#bottom {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55), 0 0 26px rgba(125, 106, 228, 0.15);
+  pointer-events: none;
+}
+#bottom[hidden] { display: none; }
+#lanterns { display: flex; gap: 6px; }
+#lanterns i {
+  width: 26px;
+  height: 24px;
+  border-radius: 48% 48% 44% 44% / 56% 56% 44% 44%;
+  background: radial-gradient(circle at 40% 35%, #4c4660, #1e1a2c 75%);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+/* A stalk on each. */
+#lanterns i::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 4px;
+  height: 7px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: #3e3a2c;
+}
+#lanterns i.lit {
+  background: radial-gradient(circle at 42% 38%, #ffe08a, var(--season) 45%, var(--season-deep) 100%);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 0 14px var(--season-glow), 0 0 0 1px rgba(0, 0, 0, 0.5);
+  animation: kindle 0.5s ease-out;
+}
+#lanterns i.lit::before { background: #5a7a30; }
+/* A carved face on the lit ones. */
+#lanterns i.lit::after {
+  content: '';
+  position: absolute;
+  inset: 7px 6px 5px;
+  background:
+    linear-gradient(135deg, transparent 45%, #5a1a00 46% 54%, transparent 55%) 0 0 / 6px 6px no-repeat,
+    linear-gradient(225deg, transparent 45%, #5a1a00 46% 54%, transparent 55%) 100% 0 / 6px 6px no-repeat,
+    radial-gradient(ellipse 60% 40% at 50% 100%, #5a1a00 60%, transparent 62%) 50% 100% / 100% 7px no-repeat;
+  opacity: 0.9;
+}
+@keyframes kindle { 30% { transform: scale(1.35); } }
+#clock { display: grid; justify-items: start; line-height: 1.1; }
+#clock .face { font-size: 10px; font-weight: 600; letter-spacing: 0.28em; text-transform: uppercase; color: var(--dim); }
+#clock .time { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--moon); text-shadow: 0 0 10px rgba(255, 240, 200, 0.35); }
+#clock.late .time { color: #ff8a8a; text-shadow: 0 0 10px rgba(255, 90, 90, 0.4); }
+
+#spook {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 44px);
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--frost);
+  background: radial-gradient(circle at 40% 35%, var(--berry-2), #1c1840 72%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(125, 106, 228, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(185, 174, 255, 0.8);
+}
+#spook[hidden] { display: none; }
+#spook svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+#spook circle { fill: none; stroke-width: 6; }
+#spook .track { stroke: rgba(255, 255, 255, 0.08); }
+#spook .ready { stroke: var(--bloom); stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 0; filter: drop-shadow(0 0 4px var(--bloom)); }
+#spook span { position: relative; }
+#spook:active { transform: scale(0.94); }
+#spook.cooling { color: var(--dim); }
+@media (pointer: fine) { #spook { width: 72px; height: 72px; font-size: 18px; } }
+
+/* ———————————————————————————————— messages */
+
+#banner {
+  position: fixed;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  white-space: pre-line;
+  text-align: center;
+  font-family: var(--display);
+  font-size: clamp(26px, 5.5vw, 48px);
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  pointer-events: none;
+  color: var(--moon);
+  text-shadow: 0 3px 0 #000, 0 0 22px rgba(0, 0, 0, 0.9), 0 0 34px var(--season-glow);
+}
+#banner.big { font-size: clamp(34px, 8vw, 74px); }
+#banner.berry { color: var(--bloom); text-shadow: 0 3px 0 #000, 0 0 22px rgba(0, 0, 0, 0.9), 0 0 34px rgba(125, 106, 228, 0.7); }
+#banner small {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--frost);
+  text-shadow: 0 2px 0 #000, 0 0 12px #000;
+}
+#banner.pop { animation: pop 0.4s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } }
+
+#pause {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  font-family: var(--display);
+  font-size: 64px;
+  letter-spacing: 0.08em;
+  color: var(--bloom);
+  text-shadow: 0 3px 0 #000, 0 0 30px rgba(125, 106, 228, 0.7);
+  background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(5, 4, 15, 0.4) 0%, rgba(5, 4, 15, 0.8) 75%, rgba(5, 4, 15, 0.92) 100%);
+}
+#pause[hidden] { display: none; }
+#pause small { display: block; font-family: var(--font); font-size: 15px; letter-spacing: 0.1em; color: var(--dim); margin-top: 8px; text-shadow: 0 2px 0 #000; }
+
+/* ———————————————————————————————— the title */
+
+#title {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(4vh, 22px) 16px max(3vh, 18px);
+  pointer-events: none;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 72% 58% at 50% 46%, rgba(5, 4, 15, 0) 0%, rgba(5, 4, 15, 0.5) 72%, rgba(5, 4, 15, 0.86) 100%),
+    linear-gradient(to top, rgba(5, 4, 15, 0.94) 0%, rgba(5, 4, 15, 0) 48%);
+}
+#title[hidden] { display: none; }
+.crest { display: grid; justify-items: center; }
+#title h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(64px, 15vw, 168px);
+  line-height: 0.95;
+  letter-spacing: 0.05em;
+}
+/* Blubber's name in its own colours: the berry's blues, its juice glowing through, frost on top. */
+#title h1 .word {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.08em;
+  background: linear-gradient(180deg, var(--frost) 0%, var(--bloom) 22%, var(--juice) 48%, var(--berry) 72%, #2a2470 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 #120e30) drop-shadow(0 7px 0 #05040f) drop-shadow(0 0 26px rgba(125, 106, 228, 0.65));
+  animation: breathe 4.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { filter: drop-shadow(0 3px 0 #120e30) drop-shadow(0 7px 0 #05040f) drop-shadow(0 0 26px rgba(125, 106, 228, 0.6)); transform: translateY(0); }
+  50% { filter: drop-shadow(0 3px 0 #120e30) drop-shadow(0 7px 0 #05040f) drop-shadow(0 0 40px rgba(125, 106, 228, 0.9)); transform: translateY(-4px); }
+}
+.tag {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  color: var(--dim);
+  text-transform: lowercase;
+  text-shadow: 0 2px 0 #000;
+}
+#title .menu { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+#start, #tally .go, #tally .again {
+  position: relative;
+  font-family: var(--display);
+  font-size: 34px;
+  letter-spacing: 0.12em;
+  padding: 10px 46px 12px;
+  color: #fff;
+  background: radial-gradient(ellipse at 50% 20%, var(--juice), var(--berry-2) 45%, #241c70 100%);
+  border: 0;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(185, 174, 255, 0.5),
+    0 10px 24px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(125, 106, 228, 0.55);
+  text-shadow: 0 2px 0 #1a1050, 0 0 14px rgba(223, 226, 255, 0.7);
+  animation: glowpulse 2.6s ease-in-out infinite;
+}
+#start:hover, #tally .go:hover, #tally .go:focus-visible, #tally .again:hover { filter: brightness(1.15); }
+#start:active, #tally .go:active, #tally .again:active { transform: translateY(2px) scale(0.98); }
+@keyframes glowpulse { 50% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(185, 174, 255, 0.7), 0 10px 24px rgba(0, 0, 0, 0.6), 0 0 60px rgba(125, 106, 228, 0.8); } }
+
+/* The nights: a row for each month. */
+#nights { display: grid; gap: 8px; width: min(820px, 100%); }
+#nights .month { display: grid; grid-template-columns: 96px repeat(4, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+#nights .month > b {
+  align-self: center;
+  justify-self: end;
+  padding-right: 6px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--season);
+  text-shadow: 0 2px 0 #000, 0 0 12px var(--season-glow);
+}
+#nights .month[data-season='halloween'] { --season: #ff8a2a; --season-glow: rgba(255, 138, 42, 0.45); }
+#nights .month[data-season='harvest'] { --season: #f0a83c; --season-glow: rgba(240, 168, 60, 0.45); }
+#nights .month[data-season='winter'] { --season: #9fdcff; --season-glow: rgba(159, 220, 255, 0.5); }
+.night {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 10px;
+  text-align: left;
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(48, 40, 92, 0.85), rgba(22, 18, 48, 0.9));
+  border: 1px solid rgba(185, 174, 255, 0.22);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.night .n { grid-row: span 2; font-family: var(--display); font-size: 24px; color: var(--season); text-shadow: 0 0 10px var(--season-glow); min-width: 1.1em; text-align: center; }
+.night .name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.night .moons { font-size: 11px; letter-spacing: 0.15em; color: rgba(255, 242, 200, 0.25); }
+.night .moons b { color: var(--moon); font-weight: 400; text-shadow: 0 0 8px rgba(255, 242, 200, 0.7); }
+.night:hover:not(:disabled) { background: linear-gradient(180deg, rgba(70, 58, 130, 0.9), rgba(30, 24, 64, 0.92)); border-color: rgba(185, 174, 255, 0.5); }
+.night:disabled { cursor: default; opacity: 0.38; }
+
+#best { margin: 0; font-size: 14px; letter-spacing: 0.16em; color: var(--moon); min-height: 1em; text-shadow: 0 2px 0 #000; }
+
+/* Wisps drifting up behind the title. */
+.wisps { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.wisps i {
+  position: absolute;
+  bottom: -20px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bloom);
+  box-shadow: 0 0 10px 4px rgba(125, 106, 228, 0.6);
+  opacity: 0;
+  animation: rise 11s linear infinite;
+}
+@keyframes rise {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  12% { opacity: 0.75; }
+  70% { opacity: 0.45; }
+  100% { transform: translate(var(--drift, 30px), -108vh) scale(1.1); opacity: 0; }
+}
+.wisps i:nth-child(1) { left: 8%; animation-delay: -0.4s; animation-duration: 12s; --drift: 40px; }
+.wisps i:nth-child(2) { left: 17%; animation-delay: -3.1s; animation-duration: 9.5s; --drift: -30px; }
+.wisps i:nth-child(3) { left: 26%; animation-delay: -6.6s; animation-duration: 13s; --drift: 22px; }
+.wisps i:nth-child(4) { left: 35%; animation-delay: -1.9s; animation-duration: 10.5s; --drift: -44px; }
+.wisps i:nth-child(5) { left: 44%; animation-delay: -8.2s; animation-duration: 12.5s; --drift: 14px; }
+.wisps i:nth-child(6) { left: 53%; animation-delay: -4.7s; animation-duration: 9s; --drift: -18px; }
+.wisps i:nth-child(7) { left: 62%; animation-delay: -10.1s; animation-duration: 14s; --drift: 36px; }
+.wisps i:nth-child(8) { left: 71%; animation-delay: -2.6s; animation-duration: 11s; --drift: -26px; }
+.wisps i:nth-child(9) { left: 80%; animation-delay: -7.3s; animation-duration: 10s; --drift: 20px; }
+.wisps i:nth-child(10) { left: 89%; animation-delay: -5.5s; animation-duration: 12s; --drift: -36px; }
+.wisps i:nth-child(11) { left: 13%; animation-delay: -9.4s; animation-duration: 15s; --drift: 10px; }
+.wisps i:nth-child(12) { left: 48%; animation-delay: -11.8s; animation-duration: 13.5s; --drift: -12px; }
+.wisps i:nth-child(13) { left: 75%; animation-delay: -12.9s; animation-duration: 16s; --drift: 28px; }
+.wisps i:nth-child(14) { left: 94%; animation-delay: -0.9s; animation-duration: 10.8s; --drift: -40px; }
+
+.help {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 18px;
+  font-size: 12.5px;
+  color: var(--dim);
+  max-width: 780px;
+}
+kbd {
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border: 1px solid rgba(185, 174, 255, 0.35);
+  border-radius: 6px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ———————————————————————————————— the tally, after a night */
+
+#tally {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(20, 14, 50, 0.4) 0%, rgba(5, 4, 15, 0.78) 75%, rgba(5, 4, 15, 0.92) 100%);
+}
+#tally[hidden] { display: none; }
+#tally .card {
+  width: min(440px, 100%);
+  padding: 22px 28px 24px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(125, 106, 228, 0.22), rgba(0, 0, 0, 0) 70%),
+    linear-gradient(180deg, rgba(42, 34, 86, 0.97), rgba(14, 11, 34, 0.98));
+  border: 1px solid rgba(185, 174, 255, 0.4);
+  border-radius: 24px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75), 0 0 70px rgba(125, 106, 228, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: slam 0.45s cubic-bezier(.2, 1.5, .4, 1);
+}
+@keyframes slam { from { transform: scale(0.8) translateY(20px); opacity: 0; } }
+#tally .month { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: var(--season); }
+#tally h2 {
+  margin: 2px 0 6px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 44px;
+  letter-spacing: 0.04em;
+  color: var(--frost);
+  text-shadow: 0 3px 0 #000, 0 0 24px rgba(125, 106, 228, 0.8);
+}
+#tally .moons { display: flex; justify-content: center; gap: 14px; margin: 6px 0 14px; }
+#tally .moons i {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #3a3456, #1a1630 70%);
+  box-shadow: inset -8px -6px 0 rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+#tally .moons i.won {
+  background: radial-gradient(circle at 38% 34%, #fffdf0, var(--moon) 55%, #d8cc9c 100%);
+  box-shadow: inset -8px -6px 0 rgba(160, 140, 90, 0.35), 0 0 22px rgba(255, 242, 200, 0.7);
+  animation: rise-moon 0.5s cubic-bezier(.2, 1.6, .4, 1) backwards;
+}
+#tally .moons i.won:nth-child(2) { animation-delay: 0.25s; }
+#tally .moons i.won:nth-child(3) { animation-delay: 0.5s; }
+@keyframes rise-moon { from { transform: scale(0.2) translateY(12px); opacity: 0; } }
+#tally dl { margin: 0 0 12px; display: grid; gap: 6px; padding: 10px 14px; background: rgba(0, 0, 0, 0.3); border-radius: 14px; }
+#tally .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+#tally dt { color: var(--dim); letter-spacing: 0.16em; text-transform: uppercase; font-size: 12px; font-weight: 600; }
+#tally dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+#tally dd small { font-weight: 400; color: var(--dim); }
+#tally .row.met dd { color: var(--moon); }
+#tally .note { margin: 0 0 16px; font-size: 14px; color: var(--dim); min-height: 1.2em; }
+#tally .buttons { display: flex; justify-content: center; gap: 10px; }
+#tally .go { font-size: 26px; padding: 8px 34px 10px; }
+#tally .again { font-size: 22px; padding: 8px 22px 10px; background: radial-gradient(ellipse at 50% 20%, #4a4470, #24204a 60%, #15122e 100%); animation: none; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(185, 174, 255, 0.3), 0 10px 24px rgba(0, 0, 0, 0.6); }
+
+#mute {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  color: var(--dim);
+  background: rgba(20, 16, 44, 0.85);
+  border: 1px solid rgba(185, 174, 255, 0.3);
+  border-radius: 999px;
+}
+#mute[aria-pressed='true'] { color: #ff9a9a; }
+
+#error {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+  margin: 0;
+  white-space: pre-wrap;
+  text-align: center;
+  font: 15px/1.6 var(--font);
+  color: #ffb0c0;
+}
+#error[hidden] { display: none; }
+
+@media (pointer: coarse) { .help .keys { display: none; } }
+@media (pointer: fine) { .help .touch { display: none; } }
+
+@media (max-width: 700px) {
+  #top { padding-right: max(120px, calc(env(safe-area-inset-right) + 112px)); grid-template-columns: 1fr auto; }
+  #night { font-size: 13px; }
+  #candy { font-size: 34px; }
+  #map { max-width: 104px; max-height: 104px; padding: 5px; border-radius: 10px; }
+  #nights .month { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #nights .month > b { grid-column: 1 / -1; justify-self: start; font-size: 18px; }
+  #bottom { padding: 8px 12px 8px 10px; gap: 10px; }
+  #lanterns i { width: 20px; height: 18px; }
+  #clock .time { font-size: 16px; }
+  #start { font-size: 28px; }
+}
