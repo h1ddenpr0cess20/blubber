@@ -1,4 +1,4 @@
-import { lang, LANGS, nightWords, onLang, setLang, t, WORDS } from './lang.js';
+import { fontsFor, lang, LANGS, nightWords, onLang, setLang, t, WORDS } from './lang.js';
 import { NIGHTS } from './nights.js';
 import { SEASONS } from './themes.js';
 
@@ -64,9 +64,16 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
     }
     langEl.setAttribute('aria-label', t('langLabel'));
   };
-  langEl.addEventListener('click', (e) => {
+  // The other language's fonts first, so the title changes over in one go.
+  let switching = false;
+  langEl.addEventListener('click', async (e) => {
     e.stopPropagation();
-    setLang(LANGS.find((l) => l !== lang()));
+    if (switching) return;
+    switching = true;
+    const next = LANGS.find((l) => l !== lang());
+    await fontsFor(next);
+    switching = false;
+    setLang(next);
   });
   langEl.addEventListener('pointerdown', (e) => e.stopPropagation());
   onLang(() => {

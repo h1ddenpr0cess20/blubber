@@ -2,7 +2,7 @@ import { createAudio } from './audio.js';
 import { createGame } from './game.js';
 import { createHud } from './hud.js';
 import { createInput } from './input.js';
-import { setLang, startingLang, t } from './lang.js';
+import { fontsFor, lang, setLang, startingLang, t } from './lang.js';
 import { preload } from './models/library.js';
 import { NIGHTS } from './nights.js';
 import { createStage } from './stage.js';
@@ -13,6 +13,8 @@ import { createStorage } from './storage.js';
 preload(['pumpkin', 'jack', 'sweet', 'candycorn', 'lollipop', NIGHTS[0].chasers[0]?.kind].filter(Boolean));
 
 setLang(startingLang(), { keep: false });
+// Fetched while the stage is set up, so the title comes up in its own fonts.
+const fontsReady = fontsFor(lang());
 
 const view = document.getElementById('view');
 const audio = createAudio();
@@ -45,6 +47,7 @@ document.getElementById('spook').addEventListener('click', (e) => {
 
 try {
   const stage = await createStage(view);
+  await fontsReady;
   game = createGame({ stage, hud, input, audio, storage: createStorage() });
   globalThis.blubber = game;
 

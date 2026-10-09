@@ -166,6 +166,25 @@ export function jaChars() {
   return [...new Set(japanese)].filter((c) => c > '\x7f' && !english.has(c)).sort();
 }
 
+/**
+ * The fonts each language is drawn in, as `document.fonts.load` takes them:
+ * the title's, the words', and in English the Japanese on the button that
+ * switches to it. A font is only fetched once something on screen is in it,
+ * so without this the title would show in a stand-in font and then swap.
+ */
+const FONTS = {
+  en: [['1em Creepster', 'Blubber'], ['500 1em Fredoka', 'Float'], ['600 1em "Zen Maru Gothic"', '日本語あ']],
+  ja: [['1em Creepster', '10'], ['500 1em Fredoka', '10'], ['1em "Potta One"', 'ブラバー'], ['500 1em "Zen Maru Gothic"', 'あ'], ['700 1em "Zen Maru Gothic"', 'あ']],
+};
+
+/** Settles once `code`'s fonts are in, or after `wait` ms if they're slow: they swap in when they come. */
+export function fontsFor(code, wait = 1500) {
+  const fonts = globalThis.document?.fonts;
+  if (!fonts || !FONTS[code]) return Promise.resolve();
+  const loads = FONTS[code].map(([font, text]) => fonts.load(font, text).catch(() => {}));
+  return Promise.race([Promise.all(loads), new Promise((ok) => setTimeout(ok, wait))]);
+}
+
 const listeners = new Set();
 let current = 'en';
 
