@@ -4,6 +4,7 @@ import { createEffects } from './effects.js';
 import { buildGrounds } from './grounds.js';
 import { createHaunt, litCount, moons, SPOOK, STEP_TIME, stepHaunt } from './haunt.js';
 import { createIce } from './ice.js';
+import { nightWords, t } from './lang.js';
 import { decorDetailOf, detailOf, hurry, readyAll } from './models/library.js';
 import { buildNight } from './night.js';
 import { NIGHTS } from './nights.js';
@@ -161,7 +162,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
     hud.play(night, i);
     // The title has no room to say how a finger steers, so the first night says it.
     const touch = i === 0 && globalThis.matchMedia?.('(pointer: coarse)').matches;
-    hud.banner(night.name, 'big', touch ? `${night.recipe.intro}\nHold anywhere and Blubber floats toward it.` : night.recipe.intro);
+    const { name, intro } = nightWords(night.recipe);
+    hud.banner(name, 'big', touch ? `${intro}\n${t('touchHint')}` : intro);
     hud.candy(0);
     hud.lanterns(haunt);
     hud.clock(0, night.recipe.par);
@@ -217,12 +219,12 @@ export function createGame({ stage, hud, input, audio, storage }) {
       hud.lanterns(haunt);
       relight();
       const n = litCount(haunt), all = haunt.lanterns.length;
-      if (!out.opened) hud.banner(`${n} of ${all}`, 'normal', all - n === 1 ? 'one lantern left' : `${all - n} lanterns left`);
+      if (!out.opened) hud.banner(t('lit', n, all), 'normal', t('left', all - n));
     }
     if (out.opened) {
       audio.gate();
       relight();
-      hud.banner('The moon gate opens!', 'big berry', 'Float out through it.');
+      hud.banner(t('gateOpens'), 'big berry', t('floatOut'));
     }
     if (out.spooked) {
       speaking = 0.9;
