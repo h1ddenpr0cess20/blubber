@@ -75,6 +75,8 @@ export function createDecor(GFX, night) {
   return {
     group,
     build,
+    /** Whether every kind of scenery is in. */
+    get complete() { return built.size === byKind.size; },
     update(dt) { for (const c of cubes) c.update(dt); },
   };
 }

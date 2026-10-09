@@ -4,7 +4,7 @@ import { createEffects } from './effects.js';
 import { buildGrounds } from './grounds.js';
 import { createHaunt, litCount, moons, SPOOK, STEP_TIME, stepHaunt } from './haunt.js';
 import { createIce } from './ice.js';
-import { decorDetailOf, detailOf, readyAll } from './models/library.js';
+import { decorDetailOf, detailOf, hurry, readyAll } from './models/library.js';
 import { buildNight } from './night.js';
 import { NIGHTS } from './nights.js';
 import { createDecor } from './decor.js';
@@ -25,7 +25,7 @@ import { groundAxes } from './view.js';
  */
 
 /** How the camera sits for the title: low, so the sky and the moon show, and circling. */
-const TITLE = Object.freeze({ zoom: 0.62, pitch: 0.42, turn: 0.07 });
+const TITLE = Object.freeze({ zoom: 0.62, pitch: 0.42, turn: 0.12 });
 
 /** The light baked into the ground round each lit lantern, candle and the open gate: [reach, [r, g, b]]. */
 const BAKE = {
@@ -51,6 +51,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
   let runCandy = 0;
   let speaking = 0;
   let lastLit = -1, gateOpen = 0;
+  /** When the scenery was last looked at for anything newly baked to put in. */
+  let sceneryCheck = 0;
 
   /** Builds night `i` and puts it in the scene. */
   function setNight(i) {
@@ -81,7 +83,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
     const g = haunt.ghost;
     stage.target.set(g.x, g.y, g.z);
     hud.map(haunt);
-    // Everything in it is sculpted in the background: it doesn't start until they are all there.
+    // Everything in it is sculpted in the background. What Blubber deals with is baked first, and the
+    // night waits a moment for it; the scenery comes after, and is put in as it arrives.
     const here = haunt;
     const kinds = new Set([
       ...night.candy.map((c) => c.kind), ...night.treats.map((t) => t.kind),
@@ -89,14 +92,15 @@ export function createGame({ stage, hud, input, audio, storage }) {
       ...night.chasers.map((c) => c.kind), ...night.rollers.map((r) => r.kind), ...night.flyers.map((f) => f.kind),
       night.hands.length ? 'hand' : null,
     ].filter(Boolean));
-    const scenery = new Set(night.decor.map((d) => d.kind));
+    const needed = [...kinds].map((k) => [k, detailOf(k)]);
+    hurry([...needed, ...[...new Set(night.decor.map((d) => d.kind))].map((k) => [k, decorDetailOf(k)])]);
     baking = true;
-    readyAll([...[...kinds].map((k) => [k, detailOf(k)]), ...[...scenery].map((k) => [k, decorDetailOf(k)])]).then(() => {
+    readyAll(needed, 2500).then(() => {
       if (haunt !== here) return;
       baking = false;
-      world.decor.build();
       warmUp();
     });
+    sceneryCheck = 0;
     warmUp();
   }
 
@@ -275,7 +279,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
 
     switch (state) {
       case 'ready':
-        if (timer > 2.2 && !baking) { enter('play'); hud.banner(null); }
+        // Off as soon as the player pushes, or after a moment; once what Blubber deals with is there.
+        if (!baking && (timer > 2.2 || (timer > 0.4 && (Math.hypot(stick.x, stick.y) > 0.3 || presses.length)))) { enter('play'); hud.banner(null); }
         break;
       case 'play':
         if (timer > 2.4 && hud.bannerShown && !haunt.open) hud.banner(null);
@@ -320,6 +325,11 @@ export function createGame({ stage, hud, input, audio, storage }) {
     world.wallLights?.update(stage.time);
     world.ice?.update(stage.time);
     world.decor.update(dt);
+    sceneryCheck -= dt;
+    if (sceneryCheck <= 0 && !world.decor.complete) {
+      sceneryCheck = 0.4;
+      world.decor.build();
+    }
     world.actors.sync(dt, stage.time);
     if (litCount(haunt) !== lastLit) { lastLit = litCount(haunt); stage.setWarm(warmLights()); }
     effects.update(dt);
