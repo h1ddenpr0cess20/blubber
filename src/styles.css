@@ -9,6 +9,24 @@
   font-weight: 300 700;
   font-display: swap;
 }
+/* The Japanese: cut down to the characters it uses (scripts/fonts.js), and only fetched once one is on screen. */
+@font-face {
+  font-family: 'Potta One';
+  src: url('./fonts/potta-ja.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  src: url('./fonts/zen-maru-ja-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  src: url('./fonts/zen-maru-ja-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
 
 :root {
   --ink: #ece8ff;
@@ -29,6 +47,11 @@
   --display: 'Creepster', 'Chiller', fantasy;
   --font: 'Fredoka', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
   color-scheme: dark;
+}
+/* Creepster and Fredoka keep the numbers and the Latin letters; the Japanese falls through to its own. */
+:root:lang(ja) {
+  --display: 'Creepster', 'Potta One', 'Hiragino Maru Gothic ProN', fantasy;
+  --font: 'Fredoka', 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Meiryo', system-ui, sans-serif;
 }
 body[data-season='harvest'] { --season: #f0a83c; --season-deep: #8a4a10; --season-glow: rgba(240, 168, 60, 0.45); }
 body[data-season='winter'] { --season: #9fdcff; --season-deep: #2a6aa8; --season-glow: rgba(159, 220, 255, 0.5); }
@@ -516,6 +539,30 @@ kbd {
 #mute .cross, #mute[aria-pressed='true'] .waves { display: none; }
 #mute[aria-pressed='true'] .cross { display: inline; }
 
+/* The other language, by its own name: on the title only, up in the corner. */
+#lang {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 6px 14px;
+  color: var(--dim);
+  background: rgba(20, 16, 44, 0.6);
+  border: 1px solid rgba(185, 174, 255, 0.3);
+  border-radius: 999px;
+}
+#lang[hidden], .picking #lang { display: none; }
+#lang:hover, #lang:focus-visible { color: var(--frost); border-color: rgba(185, 174, 255, 0.6); }
+#lang .short { display: none; }
+#lang span:lang(ja) { font-family: 'Fredoka', 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif; }
+/* Japanese wants less room between its characters than the spaced-out English labels. */
+:lang(ja) .tag { letter-spacing: 0.3em; }
+:lang(ja) #title h1 { letter-spacing: 0.02em; }
+:lang(ja) .label, :lang(ja) #clock .face, :lang(ja) #tally .month, :lang(ja) #tally dt, :lang(ja) #mute, :lang(ja) #choose, :lang(ja) #best { letter-spacing: 0.08em; }
+:lang(ja) #start, :lang(ja) #tally .go, :lang(ja) #tally .again { letter-spacing: 0.04em; }
+
 #error {
   position: fixed;
   inset: 0;
@@ -568,6 +615,11 @@ kbd {
     background: rgba(20, 16, 44, 0.6);
   }
   .titled #mute svg { display: block; }
+  /* The language, a button the size of the speaker's, so it keeps clear of the name. */
+  #lang { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; font-size: 14px; letter-spacing: 0; }
+  #lang[hidden] { display: none; }
+  #lang .long { display: none; }
+  #lang .short { display: inline; }
   .titled #mute .word { display: none; }
   /* The nights, in a sheet that rises from the bottom. */
   #picker {

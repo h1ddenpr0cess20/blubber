@@ -137,17 +137,17 @@ export const THEMES = {
 /** What each season has in it: what chases, what rolls, what flies, what is lit, and the sweets. */
 export const SEASONS = {
   halloween: {
-    month: 'October', chaser: 'zombie', roller: 'bigpumpkin', flyer: 'bat', lantern: 'jack', dark: 'pumpkin',
+    chaser: 'zombie', roller: 'bigpumpkin', flyer: 'bat', lantern: 'jack', dark: 'pumpkin',
     sweets: ['sweet', 'candycorn'], treat: 'lollipop', grabber: 'hand',
     colour: '#ff8a2a',
   },
   harvest: {
-    month: 'November', chaser: 'turkey', roller: 'haybale', flyer: 'crow', lantern: 'gourd', dark: 'whitepumpkin',
+    chaser: 'turkey', roller: 'haybale', flyer: 'crow', lantern: 'gourd', dark: 'whitepumpkin',
     sweets: ['candycorn', 'sweet'], treat: 'caramelapple', grabber: null,
     colour: '#e0a040',
   },
   winter: {
-    month: 'December', chaser: 'snowman', roller: 'snowball', flyer: 'bat', lantern: 'snowlantern', dark: 'snowheap',
+    chaser: 'snowman', roller: 'snowball', flyer: 'bat', lantern: 'snowlantern', dark: 'snowheap',
     sweets: ['peppermint', 'gumdrop'], treat: 'candycane', grabber: null,
     colour: '#9fd8ff',
   },

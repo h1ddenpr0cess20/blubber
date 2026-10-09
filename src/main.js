@@ -2,6 +2,7 @@ import { createAudio } from './audio.js';
 import { createGame } from './game.js';
 import { createHud } from './hud.js';
 import { createInput } from './input.js';
+import { fontsFor, lang, setLang, startingLang, t } from './lang.js';
 import { preload } from './models/library.js';
 import { NIGHTS } from './nights.js';
 import { createStage } from './stage.js';
@@ -10,6 +11,10 @@ import { createStorage } from './storage.js';
 // The creatures and props are sculpted in code: start baking them before anything else,
 // the first night's first.
 preload(['pumpkin', 'jack', 'sweet', 'candycorn', 'lollipop', NIGHTS[0].chasers[0]?.kind].filter(Boolean));
+
+setLang(startingLang(), { keep: false });
+// Fetched while the stage is set up, so the title comes up in its own fonts.
+const fontsReady = fontsFor(lang());
 
 const view = document.getElementById('view');
 const audio = createAudio();
@@ -42,6 +47,7 @@ document.getElementById('spook').addEventListener('click', (e) => {
 
 try {
   const stage = await createStage(view);
+  await fontsReady;
   game = createGame({ stage, hud, input, audio, storage: createStorage() });
   globalThis.blubber = game;
 
@@ -70,7 +76,7 @@ try {
 } catch (err) {
   const box = document.getElementById('error');
   box.hidden = false;
-  box.textContent = 'Blubber could not start: this browser offers neither WebGPU nor WebGL 2.\n\n'
+  box.textContent = `${t('noStart')}\n\n`
     + String(err && err.message ? err.message : err);
   console.error(err);
 }

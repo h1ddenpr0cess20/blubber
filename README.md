@@ -39,6 +39,7 @@ It's a static page with no server and no keys. `npm run build` puts it in
 | <kbd>C</kbd> | Put the view back. |
 | <kbd>P</kbd> / <kbd>Esc</kbd> | Pause. |
 | <kbd>M</kbd> | Sound on or off. |
+| The button in the title's corner | English or Japanese. |
 | Gamepad | Left stick or d-pad floats; <kbd>B</kbd> spooks; right stick turns and tilts; shoulder buttons zoom; <kbd>A</kbd> starts, <kbd>Start</kbd> pauses. |
 
 ### A night
@@ -82,6 +83,17 @@ It's a static page with no server and no keys. `npm run build` puts it in
 | | 9. The Ice Palace | Walls of ice blocks. |
 | | 10. The Longest Night | The biggest maze, walled in ice, under the northern lights. |
 
+### 日本語
+
+The whole game is in Japanese as well: the title, the nights, the banners,
+the clock and the tally. The button in the top corner of the title switches
+between the two. It starts in whichever language was picked last, or else
+the browser's own, and `?lang=ja` or `?lang=en` picks one outright.
+
+![The title, in Japanese](docs/screenshots/title-ja.jpg)
+
+![うつろの丘: Hollow Hill, in Japanese](docs/screenshots/hollow-hill-ja.jpg)
+
 ![The Crypt](docs/screenshots/crypt.jpg)
 
 ![The Witch's Wood](docs/screenshots/witchs-wood.jpg)
@@ -101,8 +113,10 @@ only changes are its size and the engine it's drawn on. `src/blubber.js` has
 the details.
 
 The winter walls are the **Ice Cube** avatar, also unchanged: its rounded
-block, frozen-in facets, dished top, clear ice, frost rim, cloudy core and
-trapped bubbles, at rest on every wall tile. The whole drifting avatar
+block, frozen-in facets, dished top, clear ice and frost rim, at rest on
+every wall tile. (Its cloudy core and trapped bubbles are left out of the
+walls: they're see-through, and the ice only shows what's solid behind
+it, so they'd never be seen.) The whole drifting avatar
 floats in the middle room of the last two nights. `src/ice.js` has the
 details.
 
@@ -129,6 +143,7 @@ there. Everything else is new.
 | `src/textures.js` | Every surface is painted on a canvas at startup: hedges, grass, earth, flagstones, brick, fieldstone, corn, straw, planks, panelling, snow. |
 | `src/stage.js` | The lights, the painted night sky, the ground mist. |
 | `src/bog.js` | The witch's brew: Dungeon Roller's lava shader, cooled and turned green. |
+| `src/lang.js` | Every word on screen, in English and in Japanese, and the switch between them. |
 | `src/audio.js`, `src/score.js` | Every sound and the music, synthesised with Web Audio. The music is a theremin-and-pizzicato tune for October, a jig for November, and a music-box waltz for December. |
 
 | Script | |
@@ -139,7 +154,10 @@ there. Everything else is new.
 | `npm run lint` | ESLint |
 | `node scripts/map.js 3` | Prints a night as text. |
 | `node scripts/bake.js` | Vertex counts and bake times for the models. |
+| `node scripts/fonts.js …` | Cuts the Japanese fonts down to the characters the Japanese uses. Run it again after changing a Japanese word; the tests say when. |
 
 The fonts are [Creepster](https://fonts.google.com/specimen/Creepster) and
-[Fredoka](https://fonts.google.com/specimen/Fredoka), under the SIL Open Font
-License (`src/fonts/`). The renderer's licence is in `src/vendor/gfx/LICENSE`.
+[Fredoka](https://fonts.google.com/specimen/Fredoka), and for the Japanese
+[Potta One](https://fonts.google.com/specimen/Potta+One) and
+[Zen Maru Gothic](https://fonts.google.com/specimen/Zen+Maru+Gothic), all under
+the SIL Open Font License (`src/fonts/`). The renderer's licence is in `src/vendor/gfx/LICENSE`.
