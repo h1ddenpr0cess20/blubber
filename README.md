@@ -113,8 +113,10 @@ only changes are its size and the engine it's drawn on. `src/blubber.js` has
 the details.
 
 The winter walls are the **Ice Cube** avatar, also unchanged: its rounded
-block, frozen-in facets, dished top, clear ice, frost rim, cloudy core and
-trapped bubbles, at rest on every wall tile. The whole drifting avatar
+block, frozen-in facets, dished top, clear ice and frost rim, at rest on
+every wall tile. (Its cloudy core and trapped bubbles are left out of the
+walls: they're see-through, and the ice only shows what's solid behind
+it, so they'd never be seen.) The whole drifting avatar
 floats in the middle room of the last two nights. `src/ice.js` has the
 details.
 

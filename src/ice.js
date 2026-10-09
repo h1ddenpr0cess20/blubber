@@ -8,7 +8,10 @@
  * each the avatar at rest — and `createIceCube` stands the whole avatar up,
  * drifting, in their rooms. The frost rim is written once more in WGSL,
  * for WebGPU. Nothing about how it looks is changed; the wall blocks are
- * only meshed more coarsely, as there are hundreds of them.
+ * only meshed more coarsely, as there are hundreds of them, and are only
+ * the ice and its rim. The core and the bubbles are see-through, and what
+ * the ice shows through it is only what's solid, so inside a wall they'd
+ * never be seen.
  */
 
 const R = 0.5;
@@ -269,11 +272,10 @@ function append(out, geometry, place, turn) {
 }
 
 /**
- * The winter walls: on every wall tile, a block of the avatar at rest, with
- * its core and its bubbles, all merged into a few meshes. Each block is
- * turned a quarter at random so their facets don't line up. Returns
- * { group, update(time) }; the frost rim and the core breathe as the
- * avatar's do.
+ * The winter walls: on every wall tile, a block of the avatar at rest, all
+ * merged into one mesh and its rim. Each block is turned a quarter at
+ * random so their facets don't line up. Returns { group, update(time) };
+ * the frost rim breathes as the avatar's does.
  */
 export function createIce(GFX, night) {
   const group = new GFX.Group();
@@ -287,11 +289,8 @@ export function createIce(GFX, night) {
   for (let i = 0, j = 0; i < dirs.length; i += 3, j++) chip[j] = chipAt(dirs[i], dirs[i + 1], dirs[i + 2]);
   shape(dirs, chip, block.attributes.position.array, ICE_MODES.idle, 0);
   block.computeVertexNormals();
-  const core = octahedron(GFX, 0.21);
-  core.computeVertexNormals();
-  const bubble = BUBBLES.map((o) => new GFX.SphereGeometry(o.r, 6, 4));
 
-  const parts = { ice: { position: [], normal: [], index: [] }, rim: { position: [], normal: [], index: [] }, core: { position: [], normal: [], index: [] }, bubble: { position: [], normal: [], index: [] } };
+  const parts = { ice: { position: [], normal: [], index: [] }, rim: { position: [], normal: [], index: [] } };
   const cubes = [];
   for (let z = 0; z < grounds.rows; z++) {
     for (let x = 0; x < grounds.cols; x++) {
@@ -305,11 +304,6 @@ export function createIce(GFX, night) {
       append(parts.ice, block, place, turn);
       // The rim grown about this block's own middle: the shader would grow the whole maze about the corner of the world.
       append(parts.rim, block, (px, py, pz) => place(px * RIM_GROW, py * RIM_GROW, pz * RIM_GROW), turn);
-      append(parts.core, core, place, turn);
-      BUBBLES.forEach((o, i) => {
-        const bx = Math.cos(o.a) * o.rr, bz = Math.sin(o.a) * o.rr;
-        append(parts.bubble, bubble[i], (px, py, pz) => place(px + bx, py + o.y, pz + bz), turn);
-      });
       cubes.push([cx, cz]);
     }
   }
@@ -330,16 +324,15 @@ export function createIce(GFX, night) {
   ice.receiveShadow = true;
   mats.rim.uniforms.uGrow.value = 1;
   const rim = mesh(parts.rim, mats.rim, 'ice-frost');
-  group.add(ice, rim, mesh(parts.core, mats.core, 'ice-cores'), mesh(parts.bubble, mats.bubble, 'ice-bubbles'));
+  group.add(ice, rim);
   return {
     group,
     count: cubes.length,
-    /** The frost rim and the core breathe, at rest, as the avatar's do. */
+    /** The frost rim breathes, at rest, as the avatar's does. */
     update(time) {
       const phase = time * ICE_MODES.idle.speed;
       mats.rim.uniforms.uColor.value.set('#eaf6ff');
       mats.rim.uniforms.uStrength.value = (0.45 + ICE_MODES.idle.halo * 0.5) * (0.85 + Math.sin(phase * 1.9) * 0.15);
-      mats.core.emissiveIntensity = ICE_MODES.idle.glow * 0.12 * (0.9 + Math.sin(phase * 2.3) * 0.1);
     },
   };
 }
