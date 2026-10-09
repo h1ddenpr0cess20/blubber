@@ -299,6 +299,10 @@ html, body {
   text-shadow: 0 2px 0 #000;
 }
 #title .menu { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+#title .go { display: flex; gap: 12px; align-items: center; }
+/* On a wide screen the nights are laid out under Float; the sheet's own parts don't show. */
+#choose, #title .hint, #picker header { display: none; }
+#picker, #picker .sheet { display: contents; }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 
@@ -514,6 +518,75 @@ kbd {
 
 @media (pointer: coarse) { .help .keys { display: none; } }
 @media (pointer: fine) { .help .touch { display: none; } }
+
+/* A small screen: the title keeps the name, Float and a button for the nights, and leaves the middle to Blubber. */
+@media (max-width: 700px), (max-height: 520px) {
+  #title { padding: max(3vh, 16px) 16px max(10px, env(safe-area-inset-bottom)); }
+  #title .help { display: none; }
+  #title .menu { gap: 10px; padding-bottom: 46px; }
+  #title .hint { display: block; margin: 0; font-size: 13px; color: var(--dim); text-shadow: 0 2px 0 #000; }
+  #choose {
+    display: block;
+    font-family: var(--display);
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    padding: 10px 20px 12px;
+    color: var(--frost);
+    background: radial-gradient(ellipse at 50% 20%, #4a4470, #24204a 60%, #15122e 100%);
+    border: 0;
+    border-radius: 999px;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(185, 174, 255, 0.3), 0 8px 20px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 2px 0 #000;
+  }
+  #choose[aria-expanded='true'] { color: #fff; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 0 0 2px rgba(185, 174, 255, 0.7), 0 8px 20px rgba(0, 0, 0, 0.6); }
+  #start { font-size: 28px; padding: 9px 34px 11px; }
+  /* The nights, in a sheet that rises from the bottom. */
+  #picker {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(5, 4, 15, 0.62);
+    animation: dim 0.2s ease-out;
+  }
+  #picker.open { display: flex; }
+  .picking #mute { visibility: hidden; }
+  #picker .sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(560px, 100%);
+    max-height: min(82vh, 100%);
+    overflow-y: auto;
+    padding: 14px 14px max(16px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(42, 34, 86, 0.98), rgba(14, 11, 34, 0.99));
+    border: 1px solid rgba(185, 174, 255, 0.35);
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.7), 0 0 50px rgba(125, 106, 228, 0.25);
+    animation: sheet 0.28s cubic-bezier(.2, 1.2, .4, 1);
+  }
+  #picker header { display: flex; justify-content: space-between; align-items: center; padding: 0 2px 2px; }
+  #picker header b { font-family: var(--display); font-weight: 400; font-size: 24px; letter-spacing: 0.05em; color: var(--frost); }
+  #picker .close { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; font-size: 24px; line-height: 1; color: var(--dim); background: rgba(255, 255, 255, 0.06); }
+  #picker #nights { width: 100%; }
+  #picker #best { text-align: center; }
+  @keyframes sheet { from { transform: translateY(40px); opacity: 0; } }
+  @keyframes dim { from { opacity: 0; } }
+}
+/* Short and wide: a phone on its side. The name smaller, Float and nights side by side under it. */
+@media (max-height: 520px) {
+  #title h1 { font-size: clamp(44px, 17vh, 90px); }
+  .tag { margin-top: 2px; font-size: 12px; }
+  #title .hint { display: none; }
+  #title .menu { padding-bottom: 6px; }
+  #picker .sheet { width: min(820px, 100%); max-height: 94vh; padding-top: 10px; gap: 6px; }
+  #nights { gap: 6px; }
+  #nights .month { grid-template-columns: 86px repeat(4, minmax(0, 1fr)); }
+  #nights .month > b { grid-column: auto; justify-self: end; }
+}
 
 @media (max-width: 700px) {
   #top { padding-right: max(120px, calc(env(safe-area-inset-right) + 112px)); grid-template-columns: 1fr auto; }

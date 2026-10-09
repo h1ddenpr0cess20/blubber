@@ -22,6 +22,7 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
   const lanternsEl = $('lanterns'), clockEl = $('clock'), spookEl = $('spook');
   const bannerEl = $('banner'), titleEl = $('title'), nightsEl = $('nights'), bestEl = $('best');
   const pauseEl = $('pause'), muteEl = $('mute'), mapEl = $('map'), tallyEl = $('tally');
+  const pickerEl = $('picker'), chooseEl = $('choose');
   const ctx = mapEl.getContext('2d');
   const ring = spookEl.querySelector('.ready');
   let shown = false, mapEvery = 0, mapScale = 2, last = -1;
@@ -34,6 +35,20 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
   tallyEl.querySelector('.again').addEventListener('click', (e) => { e.stopPropagation(); onAgain(); });
   tallyEl.querySelector('.go').addEventListener('click', (e) => { e.stopPropagation(); onOnward(); });
   tallyEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+  // On a small screen the nights are in a sheet of their own, opened from the title.
+  const pick = (open) => {
+    pickerEl.classList.toggle('open', open);
+    chooseEl.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('picking', open);
+  };
+  chooseEl.addEventListener('click', (e) => { e.stopPropagation(); pick(!pickerEl.classList.contains('open')); });
+  pickerEl.querySelector('.close').addEventListener('click', (e) => { e.stopPropagation(); pick(false); });
+  // A tap outside the sheet puts it away.
+  pickerEl.addEventListener('click', (e) => { if (e.target === pickerEl) pick(false); });
+  pickerEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+  chooseEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+  addEventListener('keydown', (e) => { if (e.code === 'Escape' && pickerEl.classList.contains('open')) pick(false); });
 
   /** The map: every tile seen, the lanterns (all of them, lit or not), what chases nearby, the gate, Blubber. */
   function drawMap(h) {
@@ -93,7 +108,7 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
           b.innerHTML = `<span class="n">${i + 1}</span><span class="name"></span><span class="moons">${'<b>●</b>'.repeat(won)}${'●'.repeat(3 - won)}</span>`;
           b.querySelector('.name').textContent = n.name;
           b.title = b.disabled ? 'Escape the night before to start here' : `Start from ${n.name}`;
-          b.addEventListener('click', (e) => { e.stopPropagation(); onStart(i); });
+          b.addEventListener('click', (e) => { e.stopPropagation(); pick(false); onStart(i); });
           b.addEventListener('pointerdown', (e) => e.stopPropagation());
           row.append(b);
         });
@@ -104,6 +119,7 @@ export function createHud(root, { onStart, onAgain, onOnward }) {
     },
 
     play(night, index) {
+      pick(false);
       titleEl.hidden = true;
       tallyEl.hidden = true;
       for (const el of [top, bottom, mapEl, spookEl]) el.hidden = false;
