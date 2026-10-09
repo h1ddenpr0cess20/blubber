@@ -23,10 +23,11 @@ export const ICE_MODES = {
   melting:   { sharp: 4.2, shimmer: 1.4, speed: 1.0, spin: 0.02, glow: 1.0, halo: 0.2,  tint: 0.03,  melt: 1, bob: 0.003 },
 };
 
-const RIM_VERTEX = `varying vec3 vN; varying vec3 vP;
+// The rim stands a little proud of the block: `uGrow` times its size, about the mesh's own middle.
+const RIM_VERTEX = `uniform float uGrow; varying vec3 vN; varying vec3 vP;
 void main() {
   vN = normalize(normalMatrix * normal);
-  vec4 mv = modelViewMatrix * vec4(position * 1.03, 1.0);
+  vec4 mv = modelViewMatrix * vec4(position * uGrow, 1.0);
   vP = mv.xyz;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -41,7 +42,7 @@ const RIM_WGSL = `struct Varyings { @builtin(position) position: vec4f, @locatio
 @vertex fn vs(@location(0) position: vec3f, @location(1) normal: vec3f) -> Varyings {
   var out: Varyings;
   out.vN = normalize(object.normalMatrix * normal);
-  let mv = object.modelViewMatrix * vec4f(position * 1.03, 1.0);
+  let mv = object.modelViewMatrix * vec4f(position * material.uGrow, 1.0);
   out.vP = mv.xyz;
   out.position = object.projectionMatrix * mv;
   return out;
@@ -51,6 +52,8 @@ const RIM_WGSL = `struct Varyings { @builtin(position) position: vec4f, @locatio
   let a = pow(f, 2.4) * (1.0 - pow(f, 9.0)) * material.uStrength;
   return vec4f(material.uColor * a, a);
 }`;
+
+const RIM_GROW = 1.03;
 
 /** Frozen-in facet irregularity, per direction: fixed, so the surface never breathes. */
 const chipAt = (x, y, z) => Math.sin(x * 6.1 + y * 4.3 - z * 5.7) * 0.5 + Math.sin(y * 9.4 - z * 7.9 + x * 3.1) * 0.3 + Math.sin(z * 13.7 + x * 11.2) * 0.2;
@@ -118,7 +121,7 @@ function materials(GFX) {
   });
   const rim = new GFX.ShaderMaterial({
     name: 'frost_rim',
-    uniforms: { uColor: { value: new GFX.Color('#bfe6ff') }, uStrength: { value: 0.5 } },
+    uniforms: { uColor: { value: new GFX.Color('#bfe6ff') }, uStrength: { value: 0.5 }, uGrow: { value: RIM_GROW } },
     glsl: { vertex: RIM_VERTEX, fragment: RIM_FRAGMENT },
     wgsl: RIM_WGSL,
     transparent: true, blending: GFX.AdditiveBlending, depthWrite: false,
@@ -288,7 +291,7 @@ export function createIce(GFX, night) {
   core.computeVertexNormals();
   const bubble = BUBBLES.map((o) => new GFX.SphereGeometry(o.r, 6, 4));
 
-  const parts = { ice: { position: [], normal: [], index: [] }, core: { position: [], normal: [], index: [] }, bubble: { position: [], normal: [], index: [] } };
+  const parts = { ice: { position: [], normal: [], index: [] }, rim: { position: [], normal: [], index: [] }, core: { position: [], normal: [], index: [] }, bubble: { position: [], normal: [], index: [] } };
   const cubes = [];
   for (let z = 0; z < grounds.rows; z++) {
     for (let x = 0; x < grounds.cols; x++) {
@@ -300,6 +303,8 @@ export function createIce(GFX, night) {
       const place = (px, py, pz) => [cx + px * cos + pz * sin, cy + py, cz - px * sin + pz * cos];
       const turn = (nx, ny, nz) => [nx * cos + nz * sin, ny, -nx * sin + nz * cos];
       append(parts.ice, block, place, turn);
+      // The rim grown about this block's own middle: the shader would grow the whole maze about the corner of the world.
+      append(parts.rim, block, (px, py, pz) => place(px * RIM_GROW, py * RIM_GROW, pz * RIM_GROW), turn);
       append(parts.core, core, place, turn);
       BUBBLES.forEach((o, i) => {
         const bx = Math.cos(o.a) * o.rr, bz = Math.sin(o.a) * o.rr;
@@ -323,9 +328,8 @@ export function createIce(GFX, night) {
   const ice = mesh(parts.ice, mats.ice, 'ice-blocks');
   ice.castShadow = true;
   ice.receiveShadow = true;
-  const rim = new GFX.Mesh(ice.geometry, mats.rim);
-  rim.name = 'ice-frost';
-  rim.frustumCulled = false;
+  mats.rim.uniforms.uGrow.value = 1;
+  const rim = mesh(parts.rim, mats.rim, 'ice-frost');
   group.add(ice, rim, mesh(parts.core, mats.core, 'ice-cores'), mesh(parts.bubble, mats.bubble, 'ice-bubbles'));
   return {
     group,
