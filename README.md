@@ -6,6 +6,12 @@ corn maze and a barnyard in November, and palaces of ice in December. In each
 one it lights every lantern so the moon gate opens, eats what candy it can
 find on the way, and spooks off whatever comes shambling after it.
 
+Blubber is said /ˈbluːbər/ (BLOO-bər), like "blue" and "brr" run together,
+so it rhymes with *blooper*. That suits it, because Blubber was a blooper. It
+was supposed to be a plain blueberry, but it was made in the same chat as a
+slime, straight after it, and it came out half slime: a squashy, glowing
+ghost of a berry.
+
 It's a casual game. There are no fights, and nothing can end a run. Getting
 caught only makes Blubber spill some candy, and it can gather that up again
 if it's quick.
@@ -32,10 +38,10 @@ It's a static page with no server and no keys. `npm run build` puts it in
 |---|---|
 | <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>WASD</kbd> | Float. The maze is square on to the screen, so the keys push along its corridors. |
 | Hold the mouse or a finger | Float toward the pointer. The further it is from Blubber, the harder the push. |
-| <kbd>Space</kbd>, or the spook button | Spook. Anything close turns and runs for a few seconds. It has to recharge between spooks. |
+| <kbd>Space</kbd>, the spook button, or tap a second finger | Spook. Anything close turns and runs for a few seconds. It has to recharge between spooks. |
 | <kbd>Q</kbd> <kbd>E</kbd>, or drag with the right mouse button | Turn the view. Dragging up and down tilts it. |
 | Mouse wheel, or <kbd>+</kbd> <kbd>−</kbd> | Zoom. |
-| Two fingers | Pinch to zoom, twist to turn, drag up or down to tilt. |
+| Two fingers | Pinch to zoom, twist to turn, drag up or down to tilt. A second finger that's only tapped spooks instead, and the first keeps steering. |
 | <kbd>C</kbd> | Put the view back. |
 | <kbd>P</kbd> / <kbd>Esc</kbd> | Pause. |
 | <kbd>M</kbd> | Sound on or off. |
@@ -144,7 +150,7 @@ there. Everything else is new.
 | `src/stage.js` | The lights, the painted night sky, the ground mist. |
 | `src/bog.js` | The witch's brew: Dungeon Roller's lava shader, cooled and turned green. |
 | `src/lang.js` | Every word on screen, in English and in Japanese, and the switch between them. |
-| `src/audio.js`, `src/score.js` | Every sound and the music, synthesised with Web Audio. The music is a theremin-and-pizzicato tune for October, a jig for November, and a music-box waltz for December. |
+| `src/audio.js`, `src/score.js` | Every sound and the music, synthesised with Web Audio. The music is a dance track for each season, built round its tune: spooky electro with a theremin lead for October, a barn-dance stomp with a fiddle and banjo for November, and future bass with a music box and sleigh bells for December. Each one has an intro, a drop, a lift, a breakdown that builds to a snare roll, and a second, bigger drop. |
 
 | Script | |
 |---|---|

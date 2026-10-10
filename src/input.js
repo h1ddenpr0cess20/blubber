@@ -12,11 +12,12 @@
  * - Q and E, to turn; + and −, to zoom; C, back to the start.
  * - The right (or middle) mouse button dragged: across to turn, up and down
  *   to tilt. The wheel zooms.
- * - Two fingers: pinch to zoom, twist to turn, drag up or down to tilt.
+ * - Two fingers: pinch to zoom, twist to turn, drag up or down to tilt. A
+ *   second finger only tapped, while the first steers, spooks instead.
  * - Gamepad: right stick to turn and tilt, shoulder buttons to zoom.
  *
- * Buttons come out as one-shot presses: `spook` (Space, or B), `start`
- * (Enter, A or a tap; Space too, off the maze), `pause` (P, Escape, Start),
+ * Buttons come out as one-shot presses: `spook` (Space, B, or a second
+ * finger's tap), `start` (Enter or A; Space too, off the maze), `pause` (P, Escape, Start),
  * `mute` (M), `home` (C, or the right stick pressed).
  */
 
@@ -45,6 +46,10 @@ const ZOOM_RATE = 2.2;
 /** Dragging the view: radians per CSS pixel. */
 const DRAG_TURN = 0.0085;
 const DRAG_TILT = 0.006;
+
+/** A second finger lifted within this many milliseconds, moved less than this many CSS pixels, is a tap. */
+const TAP_TIME = 260;
+const TAP_SLOP = 14;
 
 export function createInput(surface, { anchor }) {
   const held = new Set();
@@ -75,26 +80,28 @@ export function createInput(surface, { anchor }) {
 
   /** Two fingers: how far apart, at what angle, and where between them. */
   const pair = () => {
-    const [a, b] = [...touches.values()];
+    const [a, b] = [...touches.values()].filter((t) => !t.look);
     return { span: Math.hypot(b.x - a.x, b.y - a.y), angle: Math.atan2(b.y - a.y, b.x - a.x), y: (a.y + b.y) / 2 };
   };
+  /** The two-finger gesture under way, once a second finger has shown it means one. */
   let gesture = null;
+  const fingers = () => [...touches.values()].filter((t) => t.touch).length;
+  const startGesture = () => {
+    if (gesture || fingers() < 2) return;
+    pointer = null;
+    gesture = pair();
+  };
 
   surface.addEventListener('pointerdown', (e) => {
     surface.setPointerCapture?.(e.pointerId);
     e.preventDefault();
     const look = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2);
-    touches.set(e.pointerId, { x: e.clientX, y: e.clientY, look });
-    if (touches.size === 2 && e.pointerType === 'touch') {
-      // A second finger: the view is being handled, not Blubber.
-      pointer = null;
-      gesture = pair();
-      return;
-    }
-    if (!look && touches.size === 1) {
-      pointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
-      presses.push('tap');
-    }
+    const touch = e.pointerType === 'touch';
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY, from: [e.clientX, e.clientY], at: performance.now(), look, touch });
+    // Another finger while one steers: Blubber keeps floating. If it's lifted again
+    // quickly, it was a tap, and spooks; if it stays down or moves, it's the view.
+    if (touch && fingers() >= 2) return;
+    if (!look && !pointer) pointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
   });
   surface.addEventListener('pointermove', (e) => {
     const t = touches.get(e.pointerId);
@@ -104,7 +111,9 @@ export function createInput(surface, { anchor }) {
     if (t.look) {
       turn -= dx * DRAG_TURN;
       tilt += dy * DRAG_TILT;
-    } else if (gesture && touches.size === 2) {
+    } else if (t.touch && !gesture && pointer?.id !== e.pointerId && Math.hypot(t.x - t.from[0], t.y - t.from[1]) > TAP_SLOP) {
+      startGesture();
+    } else if (gesture && fingers() >= 2) {
       const now = pair();
       if (now.span > 1 && gesture.span > 1) zoom *= gesture.span / now.span;
       let twist = now.angle - gesture.angle;
@@ -118,9 +127,19 @@ export function createInput(surface, { anchor }) {
     if (pointer && pointer.id === e.pointerId) { pointer.x = e.clientX; pointer.y = e.clientY; }
   });
   const release = (e) => {
+    const t = touches.get(e.pointerId);
     touches.delete(e.pointerId);
-    if (touches.size < 2) gesture = null;
-    if (pointer && pointer.id === e.pointerId) pointer = null;
+    if (!t) return;
+    const steering = pointer?.id === e.pointerId;
+    if (steering) pointer = null;
+    // A quick tap of a second finger, with no gesture made of it: a spook.
+    else if (t.touch && !gesture && e.type === 'pointerup' && performance.now() - t.at < TAP_TIME) presses.push('spook');
+    if (fingers() < 2) gesture = null;
+    // Back down to one finger: it takes over the steering.
+    if (!pointer && !gesture && fingers() === 1) {
+      const [id, left] = [...touches].find(([, f]) => f.touch);
+      pointer = { id, x: left.x, y: left.y };
+    }
   };
   surface.addEventListener('pointerup', release);
   surface.addEventListener('pointercancel', release);
@@ -137,6 +156,11 @@ export function createInput(surface, { anchor }) {
   return {
     /** The push this frame. */
     stick() {
+      // A second finger held down past a tap is the start of a pinch or twist.
+      if (!gesture && fingers() >= 2) {
+        const now = performance.now();
+        for (const [id, t] of touches) if (t.touch && id !== pointer?.id && now - t.at >= TAP_TIME) { startGesture(); break; }
+      }
       let x = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
       let y = (held.has('up') ? 1 : 0) - (held.has('down') ? 1 : 0);
 

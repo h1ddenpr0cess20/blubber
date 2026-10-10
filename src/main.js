@@ -40,9 +40,16 @@ document.getElementById('start').addEventListener('pointerdown', (e) => e.stopPr
 const input = createInput(view, {
   anchor: () => game?.ghostOnScreen(view.getBoundingClientRect()),
 });
-document.getElementById('spook').addEventListener('click', (e) => {
-  e.stopPropagation();
+// On the finger's touch, not its click: a phone sends no click for a second finger,
+// and the first is usually busy steering. The click is left for the keyboard.
+const spookButton = document.getElementById('spook');
+spookButton.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
   input.press('spook');
+});
+spookButton.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (e.detail === 0) input.press('spook');
 });
 
 try {

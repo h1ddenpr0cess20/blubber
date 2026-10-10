@@ -69,6 +69,8 @@ html, body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* No page pinch or double-tap zoom: a second finger anywhere would take the first one's steering with it. */
+  touch-action: none;
 }
 
 #view { position: fixed; inset: 0; touch-action: none; }
@@ -641,6 +643,7 @@ kbd {
     width: min(560px, 100%);
     max-height: min(82vh, 100%);
     overflow-y: auto;
+    touch-action: pan-y;
     padding: 14px 14px max(16px, env(safe-area-inset-bottom));
     background: linear-gradient(180deg, rgba(42, 34, 86, 0.98), rgba(14, 11, 34, 0.99));
     border: 1px solid rgba(185, 174, 255, 0.35);

@@ -338,7 +338,8 @@ export async function createStage(host) {
     key.target.position.copy(stage.target);
     key.target.updateMatrixWorld();
 
-    glow.position.set(stage.ghost.x, stage.ghost.y + 0.3, stage.ghost.z);
+    // Inside the berry, not over it: any higher and it sits at the crown and burns a white spot into the top.
+    glow.position.set(stage.ghost.x, stage.ghost.y + 0.12, stage.ghost.z);
     const g = stage.ghost;
     const near = warm
       .map((t) => ({ t, d: Math.hypot(t.at[0] - g.x, t.at[2] - g.z) }))
