@@ -235,7 +235,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
       effects.splash(g.x, g.y, g.z);
       audio.caught(out.caught.lost);
       hud.candy(haunt.carried);
-      if (out.caught.lost) hud.banner(`−${out.caught.lost}`, 'normal');
+      // What it cost, so the number makes sense: the spilled sweets can be gathered up again.
+      if (out.caught.lost) hud.banner(t('gotCaught'), 'normal', t('dropped', out.caught.lost));
     }
     if (out.bump > 2.5) audio.bump(out.bump);
     if (out.escaped) escaped();
