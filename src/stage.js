@@ -338,7 +338,8 @@ export async function createStage(host) {
     key.target.position.copy(stage.target);
     key.target.updateMatrixWorld();
 
-    glow.position.set(stage.ghost.x, stage.ghost.y + 0.3, stage.ghost.z);
+    // Just under the crown: at 0.3 it sat right on it and burned a white spot into the top; this leaves a little of that glow.
+    glow.position.set(stage.ghost.x, stage.ghost.y + 0.21, stage.ghost.z);
     const g = stage.ghost;
     const near = warm
       .map((t) => ({ t, d: Math.hypot(t.at[0] - g.x, t.at[2] - g.z) }))

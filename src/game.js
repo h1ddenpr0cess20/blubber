@@ -52,6 +52,10 @@ export function createGame({ stage, hud, input, audio, storage }) {
   let runCandy = 0;
   let speaking = 0;
   let lastLit = -1, gateOpen = 0;
+  /** How much longer the banner in play stays up, in seconds. */
+  let bannerLeft = 0;
+  /** A banner in play, up for `seconds`, or until the next one if that's Infinity. */
+  const say = (seconds, text, size, sub) => { hud.banner(text, size, sub); bannerLeft = seconds; };
   /** When the scenery was last looked at for anything newly baked to put in. */
   let sceneryCheck = 0;
 
@@ -219,12 +223,12 @@ export function createGame({ stage, hud, input, audio, storage }) {
       hud.lanterns(haunt);
       relight();
       const n = litCount(haunt), all = haunt.lanterns.length;
-      if (!out.opened) hud.banner(t('lit', n, all), 'normal', t('left', all - n));
+      if (!out.opened) say(2.2, t('lit', n, all), 'normal', t('left', all - n));
     }
     if (out.opened) {
       audio.gate();
       relight();
-      hud.banner(t('gateOpens'), 'big berry', t('floatOut'));
+      say(Infinity, t('gateOpens'), 'big berry', t('floatOut'));
     }
     if (out.spooked) {
       speaking = 0.9;
@@ -235,7 +239,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
       effects.splash(g.x, g.y, g.z);
       audio.caught(out.caught.lost);
       hud.candy(haunt.carried);
-      if (out.caught.lost) hud.banner(`−${out.caught.lost}`, 'normal');
+      // What it cost, so the number makes sense: the spilled sweets can be gathered up again.
+      if (out.caught.lost) say(1.4, t('gotCaught'), 'normal', t('dropped', out.caught.lost));
     }
     if (out.bump > 2.5) audio.bump(out.bump);
     if (out.escaped) escaped();
@@ -287,7 +292,8 @@ export function createGame({ stage, hud, input, audio, storage }) {
         if (!baking && (timer > 2.2 || (timer > 0.4 && (Math.hypot(stick.x, stick.y) > 0.3 || presses.length)))) { enter('play'); hud.banner(null); }
         break;
       case 'play':
-        if (timer > 2.4 && hud.bannerShown && !haunt.open) hud.banner(null);
+        bannerLeft -= dt;
+        if (bannerLeft <= 0 && hud.bannerShown) hud.banner(null);
         hud.clock(haunt.time, night.recipe.par);
         if (!night.midnight && haunt.time > night.recipe.par) { night.midnight = true; audio.midnight(); }
         break;
