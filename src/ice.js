@@ -11,7 +11,8 @@
  * only meshed more coarsely, as there are hundreds of them, and are only
  * the ice and its rim. The core and the bubbles are see-through, and what
  * the ice shows through it is only what's solid, so inside a wall they'd
- * never be seen.
+ * never be seen. Nor is the flat of a block's bottom, standing on the
+ * ground, so that's only as much as it takes to cast its shadow.
  */
 
 const R = 0.5;
@@ -202,6 +203,8 @@ export function createIceCube(GFX, { mats = materials(GFX) } = {}) {
   let phase = 0, drift = 0, t = 0;
   const tint = new GFX.Color();
   const pos = iceGeo.attributes.position;
+  /** How sharp the block was last shaped, if it wasn't melting then: until its mood moves, it's the same block. */
+  let shapedSharp = null;
 
   return {
     group: cube,
@@ -213,9 +216,13 @@ export function createIceCube(GFX, { mats = materials(GFX) } = {}) {
       phase += dt * m.speed;
       drift += dt * m.tint;
       const melt = m.melt, e = smooth(melt);
-      shape(dirs, chip, pos.array, m, phase);
-      pos.needsUpdate = true;
-      iceGeo.computeVertexNormals();
+      // Unmelted, the block's shape is its sharpness and nothing else (not the time): reshaped only when that moves.
+      if (melt > 0 || m.sharp !== shapedSharp) {
+        shape(dirs, chip, pos.array, m, phase);
+        pos.needsUpdate = true;
+        iceGeo.computeVertexNormals();
+        shapedSharp = melt > 0 ? null : m.sharp;
+      }
       const ca = coreGeo.attributes.position.array;
       const jitter = 0.006 * (1 + m.shimmer);
       for (let i = 0; i < ca.length; i += 3) {
@@ -259,75 +266,127 @@ export function createIceCube(GFX, { mats = materials(GFX) } = {}) {
   };
 }
 
-/** Appends `geometry`'s vertices (moved by `place(x, y, z) → [x, y, z]`, normals turned by `turn`) to `out`. */
-function append(out, geometry, place, turn) {
-  const P = geometry.attributes.position.array, N = geometry.attributes.normal.array;
-  const base = out.position.length / 3;
-  for (let i = 0; i < P.length; i += 3) {
-    out.position.push(...place(P[i], P[i + 1], P[i + 2]));
-    out.normal.push(...turn(N[i], N[i + 1], N[i + 2]));
+/**
+ * One wall block, the avatar at rest: { position, normal, index }. Its
+ * normals are the whole block's, but the flat of its bottom, a seventh of
+ * it, is only a fan from its middle to its edge. The bottom stands on the
+ * ground, facing down into it, so nothing above the ground ever sees it;
+ * it's only ever drawn into the moon's shadow, and there the fan stands
+ * in for it.
+ */
+function restingBlock(GFX) {
+  const W = 28, H = 18;
+  const sphere = new GFX.SphereGeometry(1, W, H);
+  const dirs = sphere.attributes.position.array.slice();
+  const chip = new Float32Array(dirs.length / 3);
+  for (let i = 0, j = 0; i < dirs.length; i += 3, j++) chip[j] = chipAt(dirs[i], dirs[i + 1], dirs[i + 2]);
+  shape(dirs, chip, sphere.attributes.position.array, ICE_MODES.idle, 0);
+  sphere.computeVertexNormals();
+  const P = sphere.attributes.position.array, N = sphere.attributes.normal.array, I = sphere.index.array;
+  // The sphere's rings of vertices, top to bottom; the flat is the rings at the bottom that lie on it all the way round.
+  const ring = (v) => Math.floor(v / (W + 1));
+  const flat = (r) => Array.from({ length: W + 1 }, (_, i) => r * (W + 1) + i).every((v) => P[v * 3 + 1] <= -R * 0.99);
+  let edge = H;
+  while (edge > 0 && flat(edge - 1)) edge--;
+  const middle = H * (W + 1);
+  const triangles = [];
+  for (let t = 0; t < I.length; t += 3) {
+    const tri = [I[t], I[t + 1], I[t + 2]];
+    if (!tri.every((v) => ring(v) >= edge)) triangles.push(tri);
+    // A side along the flat's edge, fanned to its middle, turned as its triangle was.
+    else for (let k = 0; k < 3; k++) if (ring(tri[k]) === edge && ring(tri[(k + 1) % 3]) === edge) triangles.push([tri[k], tri[(k + 1) % 3], middle]);
   }
-  const index = geometry.index ? geometry.index.array : Array.from({ length: P.length / 3 }, (_, k) => k);
-  for (let k = 0; k < index.length; k++) out.index.push(index[k] + base);
+  // Only the vertices still used, numbered afresh.
+  const kept = new Map(), position = [], normal = [], index = [];
+  for (const tri of triangles) {
+    for (const v of tri) {
+      if (!kept.has(v)) {
+        kept.set(v, kept.size);
+        position.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+        normal.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+      }
+      index.push(kept.get(v));
+    }
+  }
+  return { position, normal, index };
 }
 
 /**
- * The winter walls: on every wall tile, a block of the avatar at rest, all
- * merged into one mesh and its rim. Each block is turned a quarter at
- * random so their facets don't line up. Returns { group, update(time) };
- * the frost rim breathes as the avatar's does.
+ * Every block in `tiles` ([x, z, floor] each) as one mesh, each grown
+ * `grow` times about its own middle. Each is turned a quarter at random so
+ * their facets don't line up.
+ */
+function wallMesh(GFX, block, tiles, grow, material, name) {
+  const nv = block.position.length / 3, ni = block.index.length;
+  const position = new Float32Array(nv * 3 * tiles.length);
+  const normal = new Float32Array(nv * 3 * tiles.length);
+  const index = nv * tiles.length > 65535 ? new Uint32Array(ni * tiles.length) : new Uint16Array(ni * tiles.length);
+  tiles.forEach(([x, z, floor], k) => {
+    const q = Math.floor(((x * 73856093) ^ (z * 19349663)) >>> 0) % 4;
+    const cos = Math.cos(q * Math.PI / 2), sin = Math.sin(q * Math.PI / 2);
+    const cx = x + 0.5, cy = floor + R, cz = z + 0.5;
+    const P = block.position, N = block.normal, o = k * nv * 3;
+    for (let i = 0; i < nv * 3; i += 3) {
+      const px = P[i] * grow, py = P[i + 1] * grow, pz = P[i + 2] * grow;
+      position[o + i] = cx + px * cos + pz * sin;
+      position[o + i + 1] = cy + py;
+      position[o + i + 2] = cz - px * sin + pz * cos;
+      normal[o + i] = N[i] * cos + N[i + 2] * sin;
+      normal[o + i + 1] = N[i + 1];
+      normal[o + i + 2] = -N[i] * sin + N[i + 2] * cos;
+    }
+    for (let j = 0; j < ni; j++) index[k * ni + j] = block.index[j] + k * nv;
+  });
+  const g = new GFX.BufferGeometry();
+  g.setAttribute('position', new GFX.BufferAttribute(position, 3));
+  g.setAttribute('normal', new GFX.BufferAttribute(normal, 3));
+  g.setIndex(new GFX.BufferAttribute(index, 1));
+  g.computeBoundingSphere();
+  const m = new GFX.Mesh(g, material);
+  m.name = name;
+  return m;
+}
+
+/** How big a patch of the grounds each merged mesh of ice covers, in tiles. */
+const PATCH = 8;
+
+/**
+ * The winter walls: on every wall tile, a block of the avatar at rest.
+ * They're merged a patch of the grounds at a time, each patch into one
+ * mesh and its rim, so what is off screen, or out of the moon's shadow,
+ * isn't drawn. Returns { group, update(time) }; the frost rim breathes as
+ * the avatar's does.
  */
 export function createIce(GFX, night) {
   const group = new GFX.Group();
   group.name = 'ice-walls';
   const mats = materials(GFX);
   const { grounds } = night;
-  // One block, as the avatar is at rest.
-  const block = new GFX.SphereGeometry(1, 28, 18);
-  const dirs = block.attributes.position.array.slice();
-  const chip = new Float32Array(dirs.length / 3);
-  for (let i = 0, j = 0; i < dirs.length; i += 3, j++) chip[j] = chipAt(dirs[i], dirs[i + 1], dirs[i + 2]);
-  shape(dirs, chip, block.attributes.position.array, ICE_MODES.idle, 0);
-  block.computeVertexNormals();
+  const block = restingBlock(GFX);
 
-  const parts = { ice: { position: [], normal: [], index: [] }, rim: { position: [], normal: [], index: [] } };
-  const cubes = [];
+  const patches = new Map();
+  let count = 0;
   for (let z = 0; z < grounds.rows; z++) {
     for (let x = 0; x < grounds.cols; x++) {
       const c = grounds.cell(x, z);
       if (c?.kind !== 'wall') continue;
-      const q = Math.floor(((x * 73856093) ^ (z * 19349663)) >>> 0) % 4;
-      const cos = Math.cos(q * Math.PI / 2), sin = Math.sin(q * Math.PI / 2);
-      const cx = x + 0.5, cy = c.floor + R, cz = z + 0.5;
-      const place = (px, py, pz) => [cx + px * cos + pz * sin, cy + py, cz - px * sin + pz * cos];
-      const turn = (nx, ny, nz) => [nx * cos + nz * sin, ny, -nx * sin + nz * cos];
-      append(parts.ice, block, place, turn);
-      // The rim grown about this block's own middle: the shader would grow the whole maze about the corner of the world.
-      append(parts.rim, block, (px, py, pz) => place(px * RIM_GROW, py * RIM_GROW, pz * RIM_GROW), turn);
-      cubes.push([cx, cz]);
+      const k = `${Math.floor(x / PATCH)},${Math.floor(z / PATCH)}`;
+      if (!patches.has(k)) patches.set(k, []);
+      patches.get(k).push([x, z, c.floor]);
+      count++;
     }
   }
-  const mesh = (part, material, name) => {
-    const g = new GFX.BufferGeometry();
-    g.setAttribute('position', new GFX.BufferAttribute(new Float32Array(part.position), 3));
-    g.setAttribute('normal', new GFX.BufferAttribute(new Float32Array(part.normal), 3));
-    const count = part.position.length / 3;
-    g.setIndex(new GFX.BufferAttribute(count > 65535 ? new Uint32Array(part.index) : new Uint16Array(part.index), 1));
-    g.computeBoundingSphere();
-    const m = new GFX.Mesh(g, material);
-    m.name = name;
-    m.frustumCulled = false;
-    return m;
-  };
-  const ice = mesh(parts.ice, mats.ice, 'ice-blocks');
-  ice.castShadow = true;
-  ice.receiveShadow = true;
   mats.rim.uniforms.uGrow.value = 1;
-  const rim = mesh(parts.rim, mats.rim, 'ice-frost');
-  group.add(ice, rim);
+  for (const tiles of patches.values()) {
+    const ice = wallMesh(GFX, block, tiles, 1, mats.ice, 'ice-blocks');
+    ice.castShadow = true;
+    ice.receiveShadow = true;
+    // The rim grown about each block's own middle: the shader would grow the whole patch about the corner of the world.
+    group.add(ice, wallMesh(GFX, block, tiles, RIM_GROW, mats.rim, 'ice-frost'));
+  }
   return {
     group,
-    count: cubes.length,
+    count,
     /** The frost rim breathes, at rest, as the avatar's does. */
     update(time) {
       const phase = time * ICE_MODES.idle.speed;
