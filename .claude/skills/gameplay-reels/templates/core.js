@@ -127,8 +127,14 @@ const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v1
  *   ball(game)           what the player rolls: { x, y, z, vx, vz }
  *   phase(game)          'live' worth watching, 'wait' not much to see, 'end' the level is over
  *   presses(game, s)     one-shot presses for this frame, `s` seconds into the game's state
+ *   update(game, dt, s)  one frame of the game, if not `game.update(dt, presses)` (a game that is
+ *                        played by a script rather than an autopilot runs its script here)
+ *   reached(game, mark)  whether a named moment has come (for clips cut at a mark, not a frame)
+ *   touch(game, at)      where a thumb is on the glass now, if not steering: [x, y] or null
+ *                        (`at(x, y, z)` puts a point in the scene on the screen)
  *   notes(game)          while scouting, names for what just happened that no sound says (a boss fight)
  *   music(audio, m)      starts the soundtrack the reel asks for
+ *   wake(audio)          starts the sound, if not `audio.wake()`
  *   steering(game)       whether a thumb would be steering now (by default, while 'live')
  *   button               { selector, held(game, move, s) }: a thumb on an on-screen button
  *   card                 { logo: html, url }
@@ -205,11 +211,15 @@ export async function createRecorder(adapter) {
    * hidden; and one on the game's button while that is pressed.
    */
   function hands() {
+    const touching = live && adapter.touch ? adapter.touch(game, onScreen) : null;
     const b = adapter.ball(game);
-    const steering = live && (adapter.steering?.(game) ?? adapter.phase(game) === 'live');
+    const steering = live && !adapter.touch && (adapter.steering?.(game) ?? adapter.phase(game) === 'live');
     const push = steering && lastMove?.push ? lastMove.push : null;
-    const strength = push ? Math.min(1, Math.hypot(...push)) : 0;
-    if (strength > 0.06) {
+    const strength = touching ? 1 : push ? Math.min(1, Math.hypot(...push)) : 0;
+    if (touching) {
+      if (!thumb.at || thumb.on < 0.05) thumb.at = [...touching];
+      else for (const i of [0, 1]) thumb.at[i] += (touching[i] - thumb.at[i]) * ease(16);
+    } else if (strength > 0.06) {
       const [rx, ry] = onScreen(b.x, b.y, b.z);
       const [ax, ay] = onScreen(b.x + push[0], b.y, b.z + push[1]);
       const d = Math.hypot(ax - rx, ay - ry) || 1;
@@ -269,7 +279,8 @@ export async function createRecorder(adapter) {
     advance(DT);
     const state = adapter.state?.(game) ?? adapter.phase(game);
     if (state !== phase) { phase = state; since = 0; } else since += DT;
-    game.update(DT, adapter.presses?.(game, since) ?? []);
+    if (adapter.update) adapter.update(game, DT, since);
+    else game.update(DT, adapter.presses?.(game, since) ?? []);
     await settle();
   }
 
@@ -316,15 +327,20 @@ export async function createRecorder(adapter) {
       offline = new OfflineAudioContext({ numberOfChannels: 2, length: Math.ceil((seconds + 0.5) * RATE), sampleRate: RATE });
       started = false;
       frames = 0;
-      real.wake();
+      if (adapter.wake) adapter.wake(real); else real.wake();
       adapter.music(real, music);
     },
 
-    /** Runs on, silently, to `frame` frames into level `level`: from the top if it has to. */
-    async cut({ level: index, frame }) {
+    /**
+     * Runs on, silently, to `frame` frames into level `level`, or (with
+     * `mark`) until the adapter says that moment has come: from the top if it
+     * has to.
+     */
+    async cut({ level: index, frame = Infinity, mark = null }) {
       live = false;
       if (index !== level || at > frame) await begin(index);
-      while (at < frame) {
+      const limit = at + FPS * 600;
+      while (mark ? !adapter.reached(game, mark) && at < limit : at < frame) {
         await tick();
         holdAnimations();
       }

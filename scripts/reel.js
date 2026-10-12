@@ -129,7 +129,8 @@ async function choose(reel) {
   const c = reel.clips;
   if (Array.isArray(c)) {
     const out = [];
-    for (const clip of c) out.push({ ...clip, s: best(await run(clip.level), Math.round(clip.bars * bar), [], reel.worth).s });
+    // A clip at a mark (a moment the adapter names) needs no scouting: it starts when that moment comes.
+    for (const clip of c) out.push(clip.mark ? { ...clip } : { ...clip, s: best(await run(clip.level), Math.round(lengthOf(clip, bar)), [], reel.worth).s });
     return out;
   }
   if (c.from) {
@@ -155,6 +156,9 @@ async function choose(reel) {
   return out.sort((a, b) => a.s - b.s);
 }
 
+/** A clip's length in frames: so many bars (`bar` frames long) of the soundtrack, or `seconds`. */
+const lengthOf = (clip, bar) => (clip.seconds ? clip.seconds * FPS : clip.bars * bar);
+
 // ——— filming.
 
 /** Runs `cmd` with `argv`; resolves when it exits cleanly. */
@@ -172,24 +176,27 @@ async function film(name, reel) {
   const bar = 240 / reel.music.tempo;
   console.log(`${name}: choosing the clips`);
   const clips = await choose(reel);
-  const bars = clips.reduce((n, c) => n + c.bars, 0);
+  const length = clips.reduce((n, c) => n + lengthOf(c, bar * FPS) / FPS, 0);
   const page = await phone();
-  await page.evaluate((o) => globalThis.recorder.start(o), { seconds: 0.25 + bars * bar + CARD, music: reel.music });
+  await page.evaluate((o) => globalThis.recorder.start(o), { seconds: 0.25 + length + CARD, music: reel.music });
 
   // Where each clip starts and ends on the film: on the soundtrack's bar lines, the first from the very start.
   const first = reel.music.lead ?? 0.1;
   let at = first;
   const lines = [];
-  for (const c of clips) { lines.push(at); at += c.bars * bar; }
+  for (const c of clips) { lines.push(at); at += lengthOf(c, bar * FPS) / FPS; }
   const cardAt = Math.round(at * FPS);
   const total = Math.min(most, cardAt + Math.round(CARD * FPS));
   clips.forEach((c, i) => {
     c.from = i === 0 ? 0 : Math.round(lines[i] * FPS);
     c.to = i + 1 < clips.length ? Math.round(lines[i + 1] * FPS) : cardAt;
     // The best stretch was found by its length on film; the first clip also has the lead-in before the first bar.
-    c.at = Math.max(0, c.s - (i === 0 ? Math.round(first * FPS) : 0));
+    if (!c.mark) c.at = Math.max(0, c.s - (i === 0 ? Math.round(first * FPS) : 0));
   });
-  for (const c of clips) console.log(`  ${runs.get(c.level).name}, ${(c.at / FPS).toFixed(1)}s in, ${c.bars} bars`);
+  for (const c of clips) {
+    const where = c.mark ? `at "${c.mark}"` : `${(c.at / FPS).toFixed(1)}s in`;
+    console.log(`  ${runs.get(c.level)?.name ?? c.level}, ${where}, ${c.seconds ? `${c.seconds}s` : `${c.bars} bars`}`);
+  }
 
   mkdirSync(OUT, { recursive: true });
   const work = join(OUT, `.${name}`);
@@ -203,10 +210,11 @@ async function film(name, reel) {
   let frame = 0;
   for (const c of clips) {
     if (frame >= total) break;
-    const cut = await page.evaluate((o) => globalThis.recorder.cut(o), { level: c.level, frame: c.at });
+    const cut = await page.evaluate((o) => globalThis.recorder.cut(o), c.mark ? { level: c.level, mark: c.mark } : { level: c.level, frame: c.at });
     // The film has to be the run that was scouted: the same place at the same moment.
-    const then = runs.get(c.level).track[cut.frame - 1];
-    if (!then || Math.hypot(then[2] - cut.ball[0], then[3] - cut.ball[1]) > 1e-2) console.warn(`  ${runs.get(c.level).name}: not where the scouting run was at frame ${cut.frame}`);
+    const run = runs.get(c.level);
+    const then = run?.track[cut.frame - 1];
+    if (run && (!then || Math.hypot(then[2] - cut.ball[0], then[3] - cut.ball[1]) > 1e-2)) console.warn(`  ${run.name}: not where the scouting run was at frame ${cut.frame}`);
     const end = Math.min(total, c === clips.at(-1) ? total : c.to);
     for (; frame < end; frame++) {
       const say = [];

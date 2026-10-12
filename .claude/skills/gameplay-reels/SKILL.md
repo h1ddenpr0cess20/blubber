@@ -1,6 +1,6 @@
 ---
 name: gameplay-reels
-description: Make vertical gameplay reels (9:16, 1080x1920, 30 fps, H.264/AAC) for TikTok, Instagram Reels and YouTube Shorts from a browser game. The game is filmed as it looks on a phone (touch HUD, on-screen buttons, a thumb steering) and played by its own autopilot, with the game's own Web Audio music and sound. Each reel ends on a card with the game's website ("play free in your browser", phone and desktop). It runs headless on a CPU with no GPU. Use when asked for gameplay videos, reels, shorts, trailers, clips or social posts of a WebGL/WebGPU + Web Audio browser game, in particular the rolling games built on the Madness / Dungeon Roller engine (Rock 'n' Roller, Dungeon Roller, Blubber, Catroller and their siblings), or to add reels to another such game.
+description: Make vertical gameplay reels (9:16, 1080x1920, 30 fps, H.264/AAC) for TikTok, Instagram Reels and YouTube Shorts from a browser game. The game is filmed as it looks on a phone (touch HUD, on-screen buttons, a thumb steering) and played by its own autopilot (or, for a game without one, a scripted player on its keys), with the game's own Web Audio music and sound. Each reel ends on a card with the game's website ("play free in your browser", phone and desktop). It runs headless on a CPU with no GPU. Use when asked for gameplay videos, reels, shorts, trailers, clips or social posts of a WebGL/WebGPU + Web Audio browser game, in particular the rolling games built on the Madness / Dungeon Roller engine (Rock 'n' Roller, Dungeon Roller, Blubber, Catroller and their siblings), or to add reels to another such game.
 ---
 
 # Gameplay reels
@@ -58,6 +58,7 @@ How a reel is put together:
 | `reel.css` | `src/reel/reel.css` | No. Overlays, themed by `--reel-*` variables. |
 | `reel.js` | `scripts/reel.js` | No. The driver: Vite, Playwright, scoring, ffmpeg. |
 | `recorder.example.js` | `src/reel/recorder.js` | Yes. The adapter (Dungeon Roller's, as an example). |
+| `recorder.scripted.example.js` | `src/reel/recorder.js` | Yes. Short Order's adapter: a game with no autopilot, played by a scripted cook. |
 | `reels.example.js` | `scripts/reels.js` | Yes. Which reels, soundtrack, `WORTH` weights. |
 | (none) | `reel.html` | Yes. A copy of `index.html` (see below). |
 
@@ -108,6 +109,9 @@ copies.
      the thumbs.
    - `music(audio, m)`: `audio.startMusic(...m.args)`. Choose a song section
      with energy from bar 0, or start the band mid-song if the game allows it.
+   - `update(game, dt, since)`, `wake(audio)`, `reached(game, mark)` and
+     `touch(game, at)` for games that don't fit the rolling-game mould (see
+     below).
    - `card: { logo, url }` and `theme` (`display`, `body`, `accent`,
      `accent-dark`, `accent-2`, `cool`, `dim`, `pill-top`, `pill-size`,
      `url-size`, `cta-size`).
@@ -133,7 +137,10 @@ copies.
    - a list: `[{ level, bars }]`;
    - the best of many: `{ from: [levels], take, keep: [levels], bars }`, kept
      in level order;
-   - several stretches of one level: `{ level, count, bars }`.
+   - several stretches of one level: `{ level, count, bars }`;
+   - at named moments: `[{ level, mark, seconds }]`, cut when the adapter's
+     `reached(game, mark)` says so. There's no scouting, and one continuous
+     run in time order (see below).
 
    A reel can have its own `worth` on top of `WORTH`, e.g. `{ boss: 120 }`.
    Aim for 22–30 s before the 4.6 s card: 5–6 clips of 2 bars, or 2–3 of 4.
@@ -188,8 +195,10 @@ copies.
 - **Don't run renders in parallel.** It is slower overall.
 - **`pkill -f pattern` / `pgrep -f pattern` match your own shell** when the
   pattern appears in the command line, and kill it (exit 144). Find
-  processes by port or by exact argv fields:
-  `ps -eo pid,args | awk '$2=="node" && $3=="scripts/reel.js"'`.
+  processes by port, or list `ps -eo pid,args` and match the second and third
+  fields exactly (`node`, `scripts/reel.js`) with awk, not a regex on the
+  whole line. (Don't write awk's dollar-number field references in this file:
+  the skill loader substitutes them with its arguments.)
 - **Things seeded from `Date.now()`** (Dungeon Roller's fight dice) differ run
   to run. `core.js` pins `Date.now`.
 - **Promise-driven state changes** (a battle screen's `show().then(...)`) need
@@ -222,6 +231,41 @@ copies.
   `quiet: true`, so the cats never see the yarn. In the live game it will be
   seen and caught, which is fine for footage but means it may not finish a
   level. Scouting copes, because the driver only needs good stretches.
+
+## A game with no autopilot (Short Order)
+
+A cooking game has no level to scout and no autopilot. Short Order was filmed
+with a **scripted player**:
+
+- **A cook made of steps.** Each step is a function of `dt` that returns true
+  when done. The steps press the game's own keys
+  (`window.dispatchEvent(new KeyboardEvent('keydown', { key }))`, and `keyup`
+  for held keys), wait, and wait *for* things.
+- **Closed-loop on the game's own readings.** Fry until
+  `game.progress.fry.golden >= 0.72`, stir until `progress.scramble.done`,
+  heat to a burner level by reading `pan.heat.level`. The first version ran
+  on timers and served a ★☆☆☆☆ 39/100 plate ("Pale", "Still runny"), which is
+  no advert. Reading the game made it ★★★★☆ 90/100. Read the verdict before
+  rendering.
+- **Marks name the moments a reel cuts to** (`dice`, `pan`, `fry`, `crack`,
+  `whisk`, `pour`, `stir`, `plate`). The clips are `{ level, mark, seconds }`,
+  filmed in one continuous run in time order, fast-forwarding undrawn between
+  them, so the run need not repeat exactly, and the game's `Math.random` is
+  fine.
+- **Adapter hooks used:**
+  - `update` runs the cook, then the frame body `main.js` would run;
+  - `wake` is `sound.start()`;
+  - `touch` puts the thumb on whatever the hands are on (the knife, whisk or
+    spatula, projected with `at(x, y, z)`);
+  - `music` is a no-op (the kitchen has no music; its sizzle is the sound);
+  - `pilot` and `attach` are no-ops.
+- **A `<three-d-stage>`-style element with its own loop:** after `await
+  el.ready`, call `el._renderer.setAnimationLoop(null)` (or it renders on its
+  own, and drops its pixel ratio when frames come slowly). Hand the core a
+  stage shim: `{ renderer, camera, look() {}, render() { controls.update();
+  renderer.render(scene, camera) } }`.
+- **A game without a `scripts/` folder** needs `scripts/**/*.js` added to its
+  ESLint Node globals.
 
 ## Rock 'n' Roller
 
