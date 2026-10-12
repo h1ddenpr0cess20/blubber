@@ -39,6 +39,19 @@ How a reel is put together:
   the card, and video bitrate is capped at 7 Mbps, which keeps a 30 s reel
   under 30 MiB.
 
+## What the games' owner wants (their feedback so far)
+
+- **The mobile version, vertical.** Phone layout, touch buttons, a thumb on the
+  glass, not the desktop page cropped.
+- **Point people to the website.** The URL is on the pill all through the reel
+  and on the end card.
+- **Say it plays on desktop too.** The card's "Phone · Desktop" line.
+- **A light low end.** "The bass drum sounds too heavy" was about Dungeon
+  Roller's war drums. Check the balance (step 10) and use `MIX` before
+  sending.
+- **Bosses aren't important.** Make tours, action and the games' own ideas the
+  reels, not boss fights, and don't spend renders perfecting boss reels.
+
 ## Files (templates/)
 
 | File | Goes to | Changes per game? |
