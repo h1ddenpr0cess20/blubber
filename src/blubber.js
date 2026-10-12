@@ -47,6 +47,56 @@ for (let i = 0; i < 5; i++) {
   LOBES.push({ dir: d.map((v) => v / l), freq: 1.0 + i * 0.42, speed: 0.45 + i * 0.19, amp: 0.085 / (1 + i * 0.6), phase: i * 1.7 });
 }
 
+/**
+ * The lobes' waves at each of `dirs`, each wave split once into the sine and
+ * cosine of its fixed part (`stretch` times how far along the lobe the
+ * point is): a frame then only turns them on, by the sine and cosine of the
+ * part that moves, with no sine of its own per point. `count` lobes, for
+ * each point [sin, cos] for each lobe.
+ */
+function lobeWaves(dirs, count, stretch) {
+  const out = new Float64Array(dirs.length / 3 * count * 2);
+  for (let i = 0, o = 0; i < dirs.length; i += 3) {
+    for (let j = 0; j < count; j++, o += 2) {
+      const l = LOBES[j];
+      const a = l.freq * (dirs[i] * l.dir[0] + dirs[i + 1] * l.dir[1] + dirs[i + 2] * l.dir[2]) * stretch;
+      out[o] = Math.sin(a);
+      out[o + 1] = Math.cos(a);
+    }
+  }
+  return out;
+}
+
+/**
+ * `geometry.computeVertexNormals()`, the same sums in the same order, for a
+ * geometry with an index, straight on its arrays: Blubber's skin is
+ * reshaped every frame, and this is most of what that costs.
+ */
+function vertexNormals(geometry) {
+  const P = geometry.attributes.position.array, I = geometry.index.array;
+  const normal = geometry.attributes.normal, N = normal.array;
+  N.fill(0);
+  for (let i = 0; i < I.length; i += 3) {
+    const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3;
+    const bx = P[b], by = P[b + 1], bz = P[b + 2];
+    const cbx = P[c] - bx, cby = P[c + 1] - by, cbz = P[c + 2] - bz;
+    const abx = P[a] - bx, aby = P[a + 1] - by, abz = P[a + 2] - bz;
+    const x = cby * abz - cbz * aby, y = cbz * abx - cbx * abz, z = cbx * aby - cby * abx;
+    const ax = N[a] + x, ay = N[a + 1] + y, az = N[a + 2] + z;
+    const nbx = N[b] + x, nby = N[b + 1] + y, nbz = N[b + 2] + z;
+    const ncx = N[c] + x, ncy = N[c + 1] + y, ncz = N[c + 2] + z;
+    N[a] = ax; N[a + 1] = ay; N[a + 2] = az;
+    N[b] = nbx; N[b + 1] = nby; N[b + 2] = nbz;
+    N[c] = ncx; N[c + 1] = ncy; N[c + 2] = ncz;
+  }
+  for (let i = 0; i < N.length; i += 3) {
+    const x = N[i], y = N[i + 1], z = N[i + 2];
+    const s = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+    N[i] = x * s; N[i + 1] = y * s; N[i + 2] = z * s;
+  }
+  normal.needsUpdate = true;
+}
+
 const GLOW_VERTEX = `varying vec3 vN; varying vec3 vP;
 void main() {
   vN = normalize(normalMatrix * normal);
@@ -239,6 +289,9 @@ export function createBlubber(GFX, { size = 0.62 } = {}) {
   const m = { ...MODES.idle };
   let hue = 0, phase = 0;
   const white = new GFX.Color('#dfe2ff'), lilac = new GFX.Color('#b9aeff');
+  // The skin moves on all five lobes, the core on the first three.
+  const skinWaves = lobeWaves(skinDirs, 5, 2.35), coreWaves = lobeWaves(coreDirs, 3, 2.6);
+  const turn = new Float64Array(10);
 
   return {
     group,
@@ -261,33 +314,40 @@ export function createBlubber(GFX, { size = 0.62 } = {}) {
       phase += dt * m.speed;
       hue += dt * m.hue;
 
+      // Each lobe's wave is amp · sin(fixed + moving): split, the fixed part is the point's own (lobeWaves) and the moving part the frame's.
       const pos = skinGeo.attributes.position, arr = pos.array;
       const breathe = 1 + Math.sin(phase * 1.5) * m.breathe;
-      for (let i = 0; i < arr.length; i += 3) {
-        const x = skinDirs[i], y = skinDirs[i + 1], z = skinDirs[i + 2];
-        let d = 0;
-        for (const l of LOBES) d += l.amp * Math.sin(l.freq * (x * l.dir[0] + y * l.dir[1] + z * l.dir[2]) * 2.35 + phase * l.speed * 2.2 + l.phase);
+      for (let j = 0; j < 5; j++) {
+        const l = LOBES[j], b = phase * l.speed * 2.2 + l.phase;
+        turn[j * 2] = l.amp * Math.cos(b);
+        turn[j * 2 + 1] = l.amp * Math.sin(b);
+      }
+      for (let i = 0, o = 0; i < arr.length; i += 3, o += 10) {
+        const w = skinWaves;
+        const d = w[o] * turn[0] + w[o + 1] * turn[1] + w[o + 2] * turn[2] + w[o + 3] * turn[3] + w[o + 4] * turn[4]
+          + w[o + 5] * turn[5] + w[o + 6] * turn[6] + w[o + 7] * turn[7] + w[o + 8] * turn[8] + w[o + 9] * turn[9];
         const s = (1 + d * m.wobble) * breathe;
         arr[i] = basePos[i] * s; arr[i + 1] = basePos[i + 1] * s; arr[i + 2] = basePos[i + 2] * s;
       }
       pos.needsUpdate = true;
-      skinGeo.computeVertexNormals();
+      vertexNormals(skinGeo);
       crown.scale.setScalar(breathe);
       crown.position.y = (breathe - 1) * 0.1;
 
       const cpos = coreGeo.attributes.position, ca = cpos.array;
-      for (let i = 0; i < ca.length; i += 3) {
-        const x = coreDirs[i], y = coreDirs[i + 1], z = coreDirs[i + 2];
-        let d = 0;
-        for (let j = 0; j < 3; j++) {
-          const l = LOBES[j];
-          d += l.amp * 1.5 * Math.sin(l.freq * (x * l.dir[0] + y * l.dir[1] + z * l.dir[2]) * 2.6 - phase * l.speed * 3 + l.phase);
-        }
+      for (let j = 0; j < 3; j++) {
+        const l = LOBES[j], b = l.phase - phase * l.speed * 3;
+        turn[j * 2] = l.amp * 1.5 * Math.cos(b);
+        turn[j * 2 + 1] = l.amp * 1.5 * Math.sin(b);
+      }
+      for (let i = 0, o = 0; i < ca.length; i += 3, o += 6) {
+        const w = coreWaves;
+        const d = w[o] * turn[0] + w[o + 1] * turn[1] + w[o + 2] * turn[2] + w[o + 3] * turn[3] + w[o + 4] * turn[4] + w[o + 5] * turn[5];
         const s = 1 + d * m.wobble;
         ca[i] = coreBase[i] * s; ca[i + 1] = coreBase[i + 1] * s; ca[i + 2] = coreBase[i + 2] * s;
       }
       cpos.needsUpdate = true;
-      coreGeo.computeVertexNormals();
+      vertexNormals(coreGeo);
 
       paletteAt(hue, tmpColor);
       skinMat.color.copy(tmpColor);
