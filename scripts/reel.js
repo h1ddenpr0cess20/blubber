@@ -31,6 +31,8 @@ import * as config from './reels.js';
 const { CARD, HOOK, PILL, REELS, WORTH } = config;
 /** Anything the game's sound wants doing to it before it goes out (an ffmpeg audio filter chain, from reels.js). */
 const MIX = config.MIX ?? '';
+/** How long after each kind of moment the clip has to run on for it to count, in seconds: a second, unless reels.js says (a battle screen wants time to be read). */
+const AFTER = config.AFTER ?? {};
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
 /** An upright phone: 405 by 720, at a pixel ratio that makes the picture 1080 by 1920. */
@@ -59,15 +61,16 @@ const worth = (e, own = {}) => {
 
 /**
  * How good `len` frames of a level's run are from frame `s`: what was heard in
- * them (by WORTH, and the reel's `own` worth over it), and the ball rolling rather than waiting about. Nothing that runs on
- * long after the level is over.
+ * them (by WORTH, and the reel's `own` worth over it), with time enough after
+ * each to see it (AFTER), and the ball rolling rather than waiting about.
+ * Nothing that runs on long after the level is over.
  */
 function score(run, s, len, own) {
   const end = s + len;
   const over = run.track.findIndex(([, p]) => p === 2);
   if (end > run.track.length || (over >= 0 && end > over + FPS * 1.5)) return -Infinity;
   let total = 0;
-  for (const e of run.events) if (e.f >= s + 6 && e.f <= end - 10) total += worth(e, own);
+  for (const e of run.events) if (e.f >= s + 6 && e.f <= end - (AFTER[e.name] ?? 1) * FPS) total += worth(e, own);
   let speed = 0, idle = 0, wait = 0;
   for (let f = s; f < end; f++) {
     const [v, p] = run.track[f];

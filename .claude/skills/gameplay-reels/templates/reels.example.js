@@ -50,6 +50,9 @@ export const WORTH = {
   clatter: 0.5,
 };
 
+/** A fight is worth seeing only with its battle screen up long enough to read (the autopilot carries on after 2.2 seconds). */
+export const AFTER = { battle: 2.6, fight: 2.6, boss: 2.6 };
+
 /**
  * The sound, before it goes out: the war drums are deep sines hit up to seven
  * times a bar, which is all rumble on a phone, so the bottom is cut and the

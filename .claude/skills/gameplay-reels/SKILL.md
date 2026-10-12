@@ -115,7 +115,10 @@ copies.
    first argument), `MIX` (optional: an ffmpeg audio filter chain applied
    before normalising, such as Dungeon Roller's
    `highpass=f=40,bass=g=-10:f=120:w=0.7,treble=g=5:f=3000:w=0.6` to tame its
-   war drums), and `CARD`, `HOOK`, `PILL`. There are three kinds of `clips`:
+   war drums), `AFTER` (optional: seconds of footage a moment needs after it
+   to count, 1 s by default; Dungeon Roller's fights need 2.6 s so their
+   battle card can be read before the cut), and `CARD`, `HOOK`, `PILL`.
+   There are three kinds of `clips`:
    - a list: `[{ level, bars }]`;
    - the best of many: `{ from: [levels], take, keep: [levels], bars }`, kept
      in level order;
