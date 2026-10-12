@@ -49,8 +49,6 @@ How a reel is put together:
 - **A light low end.** "The bass drum sounds too heavy" was about Dungeon
   Roller's war drums. Check the balance (step 10) and use `MIX` before
   sending.
-- **Bosses aren't important.** Make tours, action and the games' own ideas the
-  reels, not boss fights, and don't spend renders perfecting boss reels.
 
 ## Files (templates/)
 
