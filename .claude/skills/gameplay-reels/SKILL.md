@@ -112,8 +112,10 @@ copies.
      a HUD element the phone layout overlaps.
 6. **`scripts/reels.js`**: `REELS` (hook line and sub-line, `music: { args,
    tempo, lead }`, `clips`), `WORTH` (sound name → points, or a function of its
-   first argument), and `CARD`, `HOOK`, `PILL`. There are three kinds of
-   `clips`:
+   first argument), `MIX` (optional: an ffmpeg audio filter chain applied
+   before normalising, such as Dungeon Roller's
+   `highpass=f=40,bass=g=-10:f=120:w=0.7,treble=g=5:f=3000:w=0.6` to tame its
+   war drums), and `CARD`, `HOOK`, `PILL`. There are three kinds of `clips`:
    - a list: `[{ level, bars }]`;
    - the best of many: `{ from: [levels], take, keep: [levels], bars }`, kept
      in level order;
@@ -144,7 +146,13 @@ copies.
    at 3–8 s a frame each, against about 1.3 s alone.
 10. **Review before sending.** Check each reel with `ffprobe` (1080x1920, h264,
     aac, duration), with `ebur128` (about -14 LUFS), and with
-    `silencedetect=noise=-45dB:d=0.3` (no gaps). Make a contact sheet with
+    `silencedetect=noise=-45dB:d=0.3` (no gaps). Check the **tonal balance**
+    against a reel the user liked:
+    `-af "lowpass=f=60,volumedetect"`, then `bandpass=f=90:width_type=o:w=1`,
+    `bandpass=f=1000:width_type=o:w=2` and `highpass=f=3000`, comparing the
+    mean volumes. Game synth drums can be all sub-bass on a phone. Fix it with
+    `MIX`. A reel already made can be re-mixed without re-rendering:
+    `ffmpeg -i in.mp4 -map 0:v -map 0:a -c:v copy -af "<MIX>,loudnorm=I=-14:TP=-1.5:LRA=11" -c:a aac -b:a 192k out.mp4`. Make a contact sheet with
     `select='eq(n\,N)+...',scale=270:480,tile=4x2`. Pull extra frames at the
     exact moments the scouting data says matter (a boss going down), because
     evenly spaced samples miss them. Send with `SendUserFile` (30 MiB limit).

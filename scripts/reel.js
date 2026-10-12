@@ -26,8 +26,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
-import { CARD, HOOK, PILL, REELS, WORTH } from './reels.js';
+import * as config from './reels.js';
 
+const { CARD, HOOK, PILL, REELS, WORTH } = config;
+/** Anything the game's sound wants doing to it before it goes out (an ffmpeg audio filter chain, from reels.js). */
+const MIX = config.MIX ?? '';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
 /** An upright phone: 405 by 720, at a pixel ratio that makes the picture 1080 by 1920. */
@@ -226,10 +229,10 @@ async function film(name, reel) {
   await video.done;
   await page.close();
 
-  // The sound under the picture: as loud as the apps play things, and faded out under the card.
+  // The sound under the picture: mixed as reels.js asks, as loud as the apps play things, and faded out under the card.
   const seconds = total / FPS;
   await exec('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', sound,
-    '-filter_complex', `[1:a]atrim=0:${seconds},afade=t=out:st=${(seconds - 1.6).toFixed(3)}:d=1.6,loudnorm=I=-14:TP=-1.5:LRA=11[a]`,
+    '-filter_complex', `[1:a]atrim=0:${seconds},${MIX ? `${MIX},` : ''}afade=t=out:st=${(seconds - 1.6).toFixed(3)}:d=1.6,loudnorm=I=-14:TP=-1.5:LRA=11[a]`,
     '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', '-shortest',
     join(OUT, `${name}.mp4`)]).done;
   rmSync(work, { recursive: true, force: true });

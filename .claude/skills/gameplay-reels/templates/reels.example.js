@@ -50,6 +50,13 @@ export const WORTH = {
   clatter: 0.5,
 };
 
+/**
+ * The sound, before it goes out: the war drums are deep sines hit up to seven
+ * times a bar, which is all rumble on a phone, so the bottom is cut and the
+ * top lifted, to about the balance of the other games' reels.
+ */
+export const MIX = 'highpass=f=40,bass=g=-10:f=120:w=0.7,treble=g=5:f=3000:w=0.6';
+
 /** How long the card to end on stays up, in seconds. */
 export const CARD = 4.6;
 
