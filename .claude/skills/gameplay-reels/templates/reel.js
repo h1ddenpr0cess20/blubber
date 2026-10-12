@@ -241,9 +241,17 @@ async function film(name, reel) {
   await page.close();
 
   // The sound under the picture: mixed as reels.js asks, as loud as the apps play things, and faded out under the card.
+  // A reel with a quiet stretch can have a bed under it: its own sound from `from` to `to` seconds, laid again, quietly, from `at`.
   const seconds = total / FPS;
+  const end = `${MIX ? `${MIX},` : ''}afade=t=out:st=${(seconds - 1.6).toFixed(3)}:d=1.6,loudnorm=I=-14:TP=-1.5:LRA=11[a]`;
+  const b = reel.bed;
+  const graph = b
+    ? `[1:a]atrim=0:${seconds},asplit[m][s];[s]atrim=${b.from}:${b.to},asetpts=N/SR/TB,volume=${b.gain ?? 0.5},afade=t=in:d=0.8,`
+      + `afade=t=out:st=${(b.to - b.from - 0.8).toFixed(3)}:d=0.8,adelay=${Math.round(b.at * 1000)}|${Math.round(b.at * 1000)}[bed];`
+      + `[m][bed]amix=inputs=2:duration=first:normalize=0,${end}`
+    : `[1:a]atrim=0:${seconds},${end}`;
   await exec('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', sound,
-    '-filter_complex', `[1:a]atrim=0:${seconds},${MIX ? `${MIX},` : ''}afade=t=out:st=${(seconds - 1.6).toFixed(3)}:d=1.6,loudnorm=I=-14:TP=-1.5:LRA=11[a]`,
+    '-filter_complex', graph,
     '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', '-shortest',
     join(OUT, `${name}.mp4`)]).done;
   rmSync(work, { recursive: true, force: true });

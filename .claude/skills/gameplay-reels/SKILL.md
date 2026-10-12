@@ -133,6 +133,11 @@ copies.
    war drums), `AFTER` (optional: seconds of footage a moment needs after it
    to count, 1 s by default; Dungeon Roller's fights need 2.6 s so their
    battle card can be read before the cut), and `CARD`, `HOOK`, `PILL`.
+   A reel can also have a `bed: { from, to, at, gain }`: its own sound from
+   `from` to `to` seconds on film, laid quietly again from `at`. Use it for a
+   game with no music that goes quiet under the ending (Short Order's kitchen
+   falls silent once the pan is empty, so its sizzle goes under the verdict
+   and the card). `silencedetect` in step 10 finds such gaps.
    There are three kinds of `clips`:
    - a list: `[{ level, bars }]`;
    - the best of many: `{ from: [levels], take, keep: [levels], bars }`, kept
