@@ -161,6 +161,7 @@ there. Everything else is new.
 | `node scripts/map.js 3` | Prints a night as text. |
 | `node scripts/bake.js` | Vertex counts and bake times for the models. |
 | `node scripts/fonts.js …` | Cuts the Japanese fonts down to the characters the Japanese uses. Run it again after changing a Japanese word; the tests say when. |
+| `node scripts/reel.js` | Gameplay reels for social media, into `reels/`: upright 1080×1920 films of the game as a phone shows it, played by the autopilot with its own music and sound, each ending on a card with the address. `scripts/reels.js` says which. They are filmed a frame at a time in headless Chromium (`reel.html`, `src/reel/`), so there's no GPU needed, only ffmpeg and a quarter of an hour a reel. |
 
 The fonts are [Creepster](https://fonts.google.com/specimen/Creepster) and
 [Fredoka](https://fonts.google.com/specimen/Fredoka), and for the Japanese

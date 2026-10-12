@@ -2,7 +2,8 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/', 'node_modules/'] },
+  // .claude/ holds a skill's templates: copies of files linted where they live.
+  { ignores: ['dist/', 'node_modules/', '.claude/'] },
 
   js.configs.recommended,
 

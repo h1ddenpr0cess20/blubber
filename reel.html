@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07061a">
+<meta name="description" content="Blubber, a blueberry ghost, floats through haunted mazes from Halloween to midwinter, lighting lanterns, eating candy and spooking off whatever shambles after it.">
+<title>Blubber — reels</title>
+<link rel="stylesheet" href="/src/styles.css">
+<link rel="stylesheet" href="/src/reel/reel.css">
+<style>
+  /* The film's own words: no banner under the opening line, and the title's berry-blue name on the card. */
+  body.hooked #banner { visibility: hidden; }
+  #card .crest { margin: 0; font-family: Creepster, cursive; font-weight: 400; font-size: 96px; line-height: 0.95; letter-spacing: 0.05em; }
+  #card .crest .word {
+    display: inline-block; padding: 0 0.08em; color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(180deg, #dfe2ff 0%, #b9aeff 22%, #7d6ae4 48%, #4a56c8 72%, #2a2470 100%);
+    filter: drop-shadow(0 3px 0 #120e30) drop-shadow(0 7px 0 #05040f) drop-shadow(0 0 30px rgba(125, 106, 228, 0.75));
+  }
+  #card .tag { margin: 6px 0 0; font-family: Fredoka, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.5em; color: #9a94c0; text-transform: lowercase; text-shadow: 0 2px 0 #000; }
+  #card .url { font-family: Fredoka, sans-serif; font-weight: 600; letter-spacing: 0.01em; }
+  #hook { font-weight: 400; letter-spacing: 0.04em; }
+  #hook small { font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+
+<header id="top" hidden>
+  <div id="night"></div>
+  <div class="bag" aria-label="Candy" data-t-label="candy"><span class="label" data-t="candy">candy</span><span id="candy">0</span></div>
+</header>
+
+<canvas id="map" width="180" height="180" hidden aria-label="Map of the maze so far" data-t-label="map"></canvas>
+
+<footer id="bottom" hidden>
+  <div id="lanterns" aria-label="Lanterns lit" data-t-label="lanternsLit"></div>
+  <div id="clock" aria-label="The time" data-t-label="time"><span class="face"></span><span class="time"></span></div>
+</footer>
+
+<button id="spook" type="button" hidden aria-label="Spook" data-t-label="spookLabel">
+  <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="ready" cx="50" cy="50" r="46"/></svg>
+  <span data-t="spook">spook</span>
+</button>
+
+<div id="banner" hidden></div>
+<div id="pause" hidden><span data-t="paused">paused</span><small data-t="carryOn">P to carry on</small></div>
+
+<section id="title" hidden>
+  <div class="wisps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <header class="crest">
+    <h1 aria-label="Blubber" data-t-label="title">
+      <span class="word" data-t="title">Blubber</span>
+    </h1>
+    <p class="tag" data-t="tag">a haunted maze</p>
+  </header>
+  <div class="menu">
+    <div class="go">
+      <button id="start" type="button"><span data-t="start">Float</span></button>
+      <button id="choose" type="button" aria-expanded="false" aria-controls="picker" data-t="choose">choose a night</button>
+    </div>
+    <div id="picker">
+      <div class="sheet" role="dialog" aria-label="Start from a night" data-t-label="startFrom">
+        <header><b data-t="startFrom">Start from a night</b><button class="close" type="button" aria-label="Close" data-t-label="close">×</button></header>
+        <div id="nights"></div>
+        <p id="best"></p>
+      </div>
+    </div>
+    <p class="help">
+      <span class="keys" data-t-html="helpFloat"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>WASD</kbd> float</span>
+      <span data-t="helpPointer">hold the mouse or a finger — float toward it</span>
+      <span class="keys" data-t-html="helpSpook"><kbd>Space</kbd> spook</span>
+      <span data-t="helpGoal">light every lantern, then out through the moon gate</span>
+      <span class="keys" data-t-html="helpView"><kbd>Q</kbd><kbd>E</kbd> or right-drag turn · wheel zoom · <kbd>C</kbd> reset view · <kbd>P</kbd> pause · <kbd>M</kbd> mute</span>
+      <span class="touch" data-t="helpTouch">two fingers: pinch to zoom, twist to turn</span>
+    </p>
+  </div>
+</section>
+
+<section id="tally" hidden aria-live="polite">
+  <div class="card">
+    <p class="month"></p>
+    <h2></h2>
+    <div class="moons" aria-label="Moons"></div>
+    <dl>
+      <div class="row candy"><dt data-t="candy">candy</dt><dd></dd></div>
+      <div class="row time"><dt data-t="outBy">out by</dt><dd></dd></div>
+      <div class="row caught"><dt data-t="caught">caught</dt><dd></dd></div>
+    </dl>
+    <p class="note"></p>
+    <div class="buttons">
+      <button class="again" type="button" data-t="again">again</button>
+      <button class="go" type="button">onward</button>
+    </div>
+  </div>
+</section>
+
+<button id="mute" type="button" aria-pressed="false" aria-label="Sound on">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path class="cross" d="M16 9l6 6M22 9l-6 6"/></svg>
+  <span class="word">sound on</span>
+</button>
+<button id="lang" type="button" hidden aria-label="Language: English. Switch to Japanese"><span class="long"></span><span class="short"></span></button>
+<pre id="error" hidden></pre>
+
+<script type="module" src="/src/reel/recorder.js"></script>
+</body>
+</html>

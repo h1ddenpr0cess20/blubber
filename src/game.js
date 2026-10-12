@@ -282,7 +282,9 @@ export function createGame({ stage, hud, input, audio, storage }) {
     let first = true;
     while (accumulator >= STEP_TIME) {
       accumulator -= STEP_TIME;
-      step(push, spook && first);
+      // Steered by the autopilot (the reels), if one is aboard; by the controls if not.
+      const auto = state === 'play' && debug.pilot ? debug.pilot.next() : null;
+      step(auto ? auto.push : push, auto ? auto.spook : spook && first);
       first = false;
     }
 
@@ -360,9 +362,13 @@ export function createGame({ stage, hud, input, audio, storage }) {
     }
   }
 
-  /** For tests and the console. */
+  /**
+   * For tests and the console; and something to steer Blubber in place of
+   * the controls (`pilot`: the autopilot's `createPilot()`, asked every step
+   * while in play).
+   */
   const debug = {
-    stage, look: null,
+    stage, look: null, pilot: null,
     get haunt() { return haunt; },
     get night() { return night; },
     get state() { return state; },

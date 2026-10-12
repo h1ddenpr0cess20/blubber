@@ -1,40 +1,59 @@
 import { litCount, STEP_TIME, stepHaunt } from '../../src/haunt.js';
 
 /**
- * Plays a night the way a careful player might: to the nearest lantern not
- * yet lit, by the fewest cells, then to the next, then out through the
- * gate; spooking anything that gets close. Steers by pushing toward the
- * middle of the next cell on the way, as the keys would.
- *
- * Returns how it went: whether it got out, how long it took, how often it
- * was caught, how much candy it came out with.
+ * Steers Blubber through haunt `h` the way a careful player might, a step at
+ * a time, for whatever runs the steps: `autopilot()` below, or the game
+ * itself (the reels). `next()` is the push and whether to spook for the
+ * coming step: to the nearest lantern not yet lit, by the fewest cells, then
+ * to the next, then out through the gate (or every sweet first, with
+ * `candy`); spooking anything that gets close. It steers by pushing toward
+ * the middle of the next cell on the way, as the keys would.
  */
-export function autopilot(h, { limit = 900, candy = false } = {}) {
+export function createPilot(h, { candy = false } = {}) {
   const { maze, plan } = h.night;
   let route = [];
   let goal = null;
+  return {
+    stuck: null,
+
+    next() {
+      const g = h.ghost;
+      const here = plan.cellAt(g.x, g.z);
+      if (!route.length || !goal || goal.done()) {
+        goal = nextGoal(h, here, candy);
+        route = goal ? maze.path(here, goal.cell) ?? [] : [];
+      }
+      // The next cell on the way whose middle isn't reached yet.
+      while (route.length > 1) {
+        const [cx, cz] = plan.cellCentre(...route[0]);
+        if (Math.hypot(cx - g.x, cz - g.z) < 0.6) route.shift();
+        else break;
+      }
+      // Straight at the goal once nothing stands between; otherwise from cell middle to cell middle.
+      const open = goal && clear(h, g.x, g.z, goal.x, goal.z);
+      const [tx, tz] = open ? [goal.x, goal.z] : route.length ? plan.cellCentre(...route[0]) : [g.x, g.z];
+      let px = tx - g.x, pz = tz - g.z;
+      const d = Math.hypot(px, pz);
+      if (d > 0.05) { px /= d; pz /= d; } else { px = pz = 0; }
+      const threat = h.chasers.some((c) => c.state !== 'scared' && Math.hypot(c.x - g.x, c.z - g.z) < 2.6);
+      return { push: [px, pz], spook: threat && h.spookWait <= 0 };
+    },
+
+    saw() {},
+  };
+}
+
+/**
+ * Plays a night with the pilot at the wheel. Returns how it went: whether it
+ * got out, how long it took, how often it was caught, how much candy it came
+ * out with.
+ */
+export function autopilot(h, { limit = 900, candy = false } = {}) {
+  const pilot = createPilot(h, { candy });
   const steps = Math.round(limit / STEP_TIME);
   for (let i = 0; i < steps && !h.escaped; i++) {
-    const g = h.ghost;
-    const here = plan.cellAt(g.x, g.z);
-    if (!route.length || !goal || goal.done()) {
-      goal = nextGoal(h, here, candy);
-      route = goal ? maze.path(here, goal.cell) ?? [] : [];
-    }
-    // The next cell on the way whose middle isn't reached yet.
-    while (route.length > 1) {
-      const [cx, cz] = plan.cellCentre(...route[0]);
-      if (Math.hypot(cx - g.x, cz - g.z) < 0.6) route.shift();
-      else break;
-    }
-    // Straight at the goal once nothing stands between; otherwise from cell middle to cell middle.
-    const open = goal && clear(h, g.x, g.z, goal.x, goal.z);
-    const [tx, tz] = open ? [goal.x, goal.z] : route.length ? plan.cellCentre(...route[0]) : [g.x, g.z];
-    let px = tx - g.x, pz = tz - g.z;
-    const d = Math.hypot(px, pz);
-    if (d > 0.05) { px /= d; pz /= d; } else { px = pz = 0; }
-    const threat = h.chasers.some((c) => c.state !== 'scared' && Math.hypot(c.x - g.x, c.z - g.z) < 2.6);
-    stepHaunt(h, [px, pz], { spook: threat && h.spookWait <= 0 });
+    const { push, spook } = pilot.next();
+    stepHaunt(h, push, { spook });
   }
   return { escaped: h.escaped, time: h.time, caught: h.caught, carried: h.carried, total: h.total, lit: litCount(h) };
 }
